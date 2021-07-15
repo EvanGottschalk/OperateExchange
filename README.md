@@ -78,57 +78,107 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+The purpose of `OperateExchange` is in its name - most actions a user would take on a cryptocurrency exchange, such as creating or cancelling orders, can be done using this program instead. The advantage of using `OperateExchange` is that users can create groups of dozens of orders, or cancel groups of orders. This allows for more efficient trading than using an exchange's normal interface, which usually only allows users to open or close one order per click.
 
 
 ### Built With
 
-* []()
-* []()
-* []()
+`Python`
 
+[`CCXT`](https://github.com/ccxt/ccxt) - The fantastic `CCXT` library is critical to `ConnectToExchange`. Huge thanks to [@kroitor](https://github.com/kroitor) and the many other `CCXT` contributors that made this program possible.
+
+[`ConnectToExchange`](https://github.com/EvanGottschalk/connecttoexchange) - This is another program I wrote for creating the initial connection to a cryptocurrency exchange. You can read more about it here: [github.com/EvanGottschalk/ConnectToExchange](https://github.com/EvanGottschalk/connecttoexchange)
+
+[`GetCurrentTime`](https://github.com/EvanGottschalk/GetCurrentTime) - This program is imported to help collect time data in a legible fashion. It also allows for the translation of time stamps. You can read more about it here: [github.com/EvanGottschalk/GetCurrentTime](https://github.com/EvanGottschalk/GetCurrentTime)
+
+[`AudioPlayer`](https://github.com/EvanGottschalk/AudioPlayer) - This is a simple program for playing custom audio alerts. It can be used with `ConnectToExchange` to warn you if an error occurs. You can read more about it here: [github.com/EvanGottschalk/AudioPlayer](https://github.com/EvanGottschalk/AudioPlayer)
+
+`QuadraticFormula` - This is a simple program for calculating the solutions to a quadratic equation using the quadratic formula.
 
 
 <!-- GETTING STARTED -->
 ## Getting Started
 
-To get a local copy up and running follow these simple steps.
-
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+Before using `OperateExchange`, you must first obtain an API key and secret from the cryptocurrency exchange of their choosing. You also need to install the [`CCXT`](https://github.com/ccxt/ccxt) library.
 
 ### Installation
 
-1. Clone the repo
+1. Install [`CCXT`](https://github.com/ccxt/ccxt). This can be done in a number of ways. I used `pip`.
    ```sh
-   git clone https://github.com/EvanGottschalk/OperateExchange.git
+   pip install ccxt
    ```
-2. Install NPM packages
-   ```sh
-   npm install
-   ```
+2. Download the `.py` files from this repository (`OperateExchange.py`, `ConnectToExchange.py`, `GetCurrentTime.py`, `QuadraticFormula.py`, and optionally `AudioPlayer.py`)
 
+3. In the same folder as `ConnectToExchange.py`, create a `.txt` file to store your API information. Its name should start with the exchange you are using, followed by an underscore, followed by the name of the account you're using, and ending with `_API.txt`.
+
+  For example, if you are using your **Main** account on **Coinbase**, you would name the `.txt` file **`Coinbase_Main_API.txt`**
+
+  If your API key is `view-only`, you can save your cryptocurrency exchange API key on the 1st line, and your API secret on the 2nd. However, **if your API key has `trade` priveleges, you should save an encrypted version of both your key and secret on those lines instead.**
+
+  To encrypt your API information, I recommend using `CustomEncryptor.py`, which can be downloaded here: [github.com/EvanGottschalk/CustomEncryptor](https://github.com/EvanGottschalk/CustomEncryptor)
+
+4. Run `OperateExchange.py`
+
+5. Congratulations! You can now use `OperateExchange` to create and cancel orders on your chosen cryptocurrency exchange!
 
 
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+**Example 1** - Creating an Order
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+The following code will create a limit order for $100 worth of bitcoin priced at $30,000.
 
+```python
+OE = OperateExchange()
+OE.createOrder({'Exchange': 'Coinbase', \
+                'Symbol': 'BTC/USD', \
+                'Side': 'buy', \
+                'Amount': '100', \
+                'Order Type': 'Limit', \
+                'Price': 30000})
+```
 
+**Example 2** - Getting a dataframe and CSV of the open, high, low, close & volume values over the 1 minute timeframe
+
+```python
+OE = OperateExchange()
+OE.getOHLCVs('', 'BTC/USDT', '1m')
+```
+
+**Example 3** - Cancel a group of orders to buy or sell bitcoin at prices between $32500 and $37500
+
+```python
+OE = OperateExchange()
+OE.CTE.connect('Coinbase')
+OE.cancelOrderGroup({'Symbol': 'BTC/USD', \
+                     'Lowest Cancel Price': 32500, \
+                     'Highest Cancel Price': 37500})
+```
+
+**Example 4** - Create an array of orders from $30,000 to $29,000 separated by $50 each on Coinbase totalling $100 in value. Since the style is `'Linear'`, the $100 of buying power will be distributed linearly from $30,000 to $29,000, with the largest order at $29,000 and the smallest at $30,000.
+
+```python
+OE = OperateExchange()
+OE.createArrayOrder({'Exchange': 'coinbase', \
+                     'Symbol': 'BTC/USD', \
+                     'Side': 'buy', \
+                     'Amount': 100, \
+                     'Order Type': 'limit', \
+                     'Price': 30000}, \
+                    {'Granularity': 50, \
+                     'Spread': 1000, \
+                     'Steepness': 0, \
+                     'Minimum Order Size': 1, \
+                     'Style': 'Linear'})
+```
 
 <!-- ROADMAP -->
 ## Roadmap
 
 See the [open issues](https://github.com/EvanGottschalk/OperateExchange/issues) for a list of proposed features (and known issues).
-
 
 
 <!-- CONTRIBUTING -->
@@ -147,7 +197,7 @@ Contributions are what make the open source community such an amazing place to b
 <!-- LICENSE -->
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the GNU GPL-3 License. See `LICENSE` for more information.
 
 
 
