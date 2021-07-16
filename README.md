@@ -26,7 +26,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/EvanGottschalk/OperateExchange">
-    <img src="images/logo.png" alt="Logo" width="151" height="80">
+    <img src="logo.png" alt="Logo" width="151" height="80">
   </a>
 
   <h3 align="center">OperateExchange</h3>
