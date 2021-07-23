@@ -215,6 +215,9 @@ Project Link: [https://github.com/EvanGottschalk/OperateExchange](https://github
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
 
+* Huge thanks to [@kroitor](https://github.com/kroitor) and the many other [CCXT](https://github.com/ccxt/ccxt) contributors that made this program possible.
+* Thanks to [@bartmassi](https://github.com/bartmassi) for working with me to improve the program's security, and for answering numerous other questions, and also for always being a helpful, available, and informative teacher (and friend).
+
 Thinking about contributing to this project? Please do! Your Github username will then appear here.
 
 
