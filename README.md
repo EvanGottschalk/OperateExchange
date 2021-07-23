@@ -80,6 +80,8 @@
 
 The purpose of `OperateExchange` is in its name - most actions a user would take on a cryptocurrency exchange, such as creating or cancelling orders, can be done using this program instead. The advantage of using `OperateExchange` is that users can create groups of dozens of orders, or cancel groups of orders. This allows for more efficient trading than using an exchange's normal interface, which usually only allows users to open or close one order per click.
 
+** *Some exchanges have an API rate limit, which means you can only put in so many orders per time. Read the API limit rules for the particular exchange if you want to use `OperateExchange` to create multiple orders on it.*
+
 
 ### Built With
 
