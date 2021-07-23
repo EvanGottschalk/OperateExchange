@@ -87,7 +87,7 @@ The purpose of `OperateExchange` is in its name - most actions a user would take
 
 `Python`
 
-[`CCXT`](https://github.com/ccxt/ccxt) - The fantastic `CCXT` library is critical to `ConnectToExchange`. Huge thanks to [@kroitor](https://github.com/kroitor) and the many other `CCXT` contributors that made this program possible.
+[`CCXT`](https://github.com/ccxt/ccxt) - The fantastic `CCXT` library is critical to this program. Huge thanks to [@kroitor](https://github.com/kroitor) and the many other `CCXT` contributors that made this program possible.
 
 [`ConnectToExchange`](https://github.com/EvanGottschalk/connecttoexchange) - This is another program I wrote for creating the initial connection to a cryptocurrency exchange. You can read more about it here: [github.com/EvanGottschalk/ConnectToExchange](https://github.com/EvanGottschalk/connecttoexchange)
 
