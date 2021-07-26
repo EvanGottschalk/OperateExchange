@@ -29,10 +29,10 @@ class OperateExchange:
                               'Side': 'sell', \
                               'Amount': 5000, \
                               'Order Type': 'Limit', \
-                              'Price': 39000}
+                              'Price': 30000}
         self.arrayOrderSettings = {'Granularity': 50, \
                                    'Spread': 2000, \
-                                   'End Price': 37000, \
+                                   'End Price': 28000, \
                                    'Steepness': 0, \
                                    'Slope': 1, \
                                    'Minimum Order Size': 1, \
@@ -107,20 +107,25 @@ class OperateExchange:
         return(value)
 
     def checkSymbolInput(self, symbol_input):
-        print(symbol_input)
         try:
             symbol_input = str(symbol_input)
             if not(symbol_input in self.CTE.availableSymbols[self.CTE.exchange_name]):
-                symbol_input = False
+                if symbol_input == 'DOGE/USD':
+                    self.CTE.availableSymbols[self.CTE.exchange_name].append('DOGE/USD')
+                else:
+                    symbol_input = False
         except:
             symbol_input = False
         return(symbol_input)
 
-    def checkAccountInput(self, account_input):
+    def checkAccountInput(self, exchange_input, account_input):
+        print(exchange_input, account_input)
         try:
             account_input = str(account_input)
+            if exchange_input.lower() == 'default':
+                exchange_input = self.CTE.exchangeAccounts['Default Exchange']
             try:
-                if not(self.CTE.exchangeAccounts[self.orderSettings['Exchange']][account_input]):
+                if not(self.CTE.exchangeAccounts[exchange_input][account_input]):
                     account_input = False
             except:
                 account_input = False
@@ -168,6 +173,8 @@ class OperateExchange:
                     price_input = False
             elif symbol == 'LTC' or symbol == 'LTC/USD' or symbol == 'LTC/USDT':
                 price_input = round(float(price_input), 2)
+            elif symbol == 'DOGE' or symbol == 'DOGE/USD' or symbol == 'DOGE/USDT':
+                price_input = round(float(price_input), 4)
         except:
             price_input = False
         return(price_input)
@@ -183,6 +190,8 @@ class OperateExchange:
                     granularity_input = False
             elif symbol == 'LTC' or symbol == 'LTC/USD' or symbol == 'LTC/USDT':
                 granularity_input = round(float(granularity_input), 2)
+            elif symbol == 'DOGE' or symbol == 'DOGE/USD' or symbol == 'DOGE/USDT':
+                granularity_input = round(float(granularity_input), 4)
         except:
             granularity_input = False
         return(granularity_input)
@@ -198,6 +207,8 @@ class OperateExchange:
                     spread_input = False
             elif symbol == 'LTC' or symbol == 'LTC/USD' or symbol == 'LTC/USDT':
                 spread_input = round(float(spread_input), 2)
+            elif symbol == 'DOGE' or symbol == 'DOGE/USD' or symbol == 'DOGE/USDT':
+                spread_input = round(float(spread_input), 4)
             if self.orderSettings['Amount'] < spread_input / self.arrayOrderSettings['Granularity']:
                 spread_input = False
                 print('\nERROR! OE Unable to create array order.\n    Cause: spread is too large for the trade amount.')
@@ -221,6 +232,8 @@ class OperateExchange:
                     print('\nERROR! OE Unable to create array order.\n    Cause: improper decimals for symbol.')
             elif symbol == 'LTC' or symbol == 'LTC/USD' or symbol == 'LTC/USDT':
                 end_price_input = round(float(end_price_input), 2)
+            elif symbol == 'DOGE' or symbol == 'DOGE/USD' or symbol == 'DOGE/USDT':
+                end_price_input = round(float(end_price_input), 5)
             if self.orderSettings['Side'] == 'buy':
                 if end_price_input > self.orderSettings['Price']:
                     end_price_input = False
@@ -522,6 +535,9 @@ class OperateExchange:
                 elif self.orderSettings['Symbol'] == 'LTC' or self.orderSettings['Symbol'] == 'LTC/USD' or \
                      self.orderSettings['Symbol'] == 'LTC/USDT' or self.orderSettings['Symbol'] == 'LTC/BTC':
                     granularity_modifier = .01
+                elif self.orderSettings['Symbol'] == 'DOGE' or self.orderSettings['Symbol'] == 'DOGE/USD' or \
+                     self.orderSettings['Symbol'] == 'DOGE/USDT' or self.orderSettings['Symbol'] == 'DOGE/BTC':
+                    granularity_modifier = .0001
                 else:
                     granularity_modifier = .5
                 while number_of_orders > self.orderSettings['Amount']:
@@ -1752,44 +1768,3 @@ class OperateExchange:
 # This will create the OperateExchange class in a non-local scope, making it more secure
 if __name__ == "__main__":
     main()
-
-
-
-# Below are some examples of how to use OperateExchange
-
-# Example 1 - Creating an order
-####OE = OperateExchange()
-####OE.createOrderargs_list.append({'Exchange': 'Coinbase', \
-####                               'Symbol': 'BTC/USD', \
-####                               'Side': 'buy', \
-####                               'Amount': '100', \
-####                               'Order Type': 'Limit', \
-####                               'Price': 30000})
-
-
-# Example 2 - Getting a dataframe and CSV of the open, high, low, close & volume values over the 1 minute timeframe
-####OE = OperateExchange()
-####OE.getOHLCVs('', 'BTC/USDT', '1m')
-
-
-# Example 3 - Cancel a group of orders with prices between $32500 and $37500
-####OE = OperateExchange()
-####OE.CTE.connect('Coinbase')
-####OE.cancelOrderGroup({'Symbol': 'BTC/USD', \
-####                     'Lowest Cancel Price': 32500, \
-####                     'Highest Cancel Price': 37500})
-
-
-# Example 4 - Create an array of orders from $30000 to $29000 separated by $50 each
-####OE = OperateExchange()
-####OE.createArrayOrder({'Exchange': 'coinbase', \
-####                     'Symbol': 'BTC/USD', \
-####                     'Side': 'buy', \
-####                     'Amount': 50, \
-####                     'Order Type': 'limit', \
-####                     'Price': 30000}, \
-####                    {'Granularity': 50, \
-####                     'Spread': 1000, \
-####                     'Steepness': 0, \
-####                     'Minimum Order Size': 1, \
-####                     'Style': 'Linear'})
