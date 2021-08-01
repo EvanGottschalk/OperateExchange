@@ -84,7 +84,9 @@ class ConnectToExchange:
                                             'Long 50x Quick': {'apiKey': '', 'secret': ''}, \
                                             'Short 50x Quick': {'apiKey': '', 'secret': ''}, \
                                             'Monty': {'apiKey': '', 'secret': ''}}, \
-                                 'Default': 'Kraken Main'}
+                                 'Default': 'Kraken Main', \
+                                 'Default Exchange': 'Kraken', \
+                                 'Default Account': 'Main'}
         self.currentConnectionDetails = {'Exchange Name': '',
                                          'Account Name': '', \
                                          'Time of Acccess': str(datetime.now())}
@@ -109,29 +111,43 @@ class ConnectToExchange:
         # This is for the case where the user calls connect() with no inputs
             if len(args) == 0:
                 try:
-                    args = [self.exchangeAccounts['Default']]
+                    exchange_name = self.exchangeAccounts['Default Exchange']
+                    account_name = self.exchangeAccounts['Default Account']
                 except:
                     exchange_name = input('To which exchange would you like to connect?\n    Exchange Name: ')
                     account_name = input('Which account on that exchange would you like to use?\n    Account Name: ')
-            if len(args) == 1:
+            elif len(args) == 1:
             # This is for the case where the user inputs a dictionary containing the exchange & account names
                 if type(args[0]) == dict:
                     exchange_name = args[0]['Exchange Name']
                     account_name = args[0]['Account Name']
-            # This else is for the case where the user enters the exchange name and the account name all at once
+            # This else is for the case where the user enters just one string
                 else:
-                    split_name = args[0].split(' ')
-                    exchange_name = split_name[0]
-                    split_account_name = split_name[1:len(split_name)]
-                    account_name = ''
-                    for word in split_account_name:
-                        account_name += word
-                        if not(word == split_account_name[len(split_account_name) - 1]):
-                            account_name += ' '
+                    if args[0].lower() == 'default':
+                        args = [self.exchangeAccounts['Default']]
+                # This if is for the case where the string is both the exchange name and account name separated by a space
+                    if ' ' in args[0]:
+                        split_name = args[0].split(' ')
+                        exchange_name = split_name[0]
+                        split_account_name = split_name[1:len(split_name)]
+                        account_name = ''
+                        for word in split_account_name:
+                            account_name += word
+                            if not(word == split_account_name[len(split_account_name) - 1]):
+                                account_name += ' '
+                # This else assumes the 1 string entered is the exchange name, and assigns the account_name to be the default account
+                    else:
+                        exchange_name = args[0]
+                        account_name = self.exchangeAccounts['Default Account']
         # This is for the case where the user calls connect() with 2 inputs - the exchange name followed by the account name
             elif len(args) == 2:
                 exchange_name = args[0]
                 account_name = args[1]
+        # This swaps in the default exchange or account if 'default' was used as an input
+            if exchange_name.lower() == 'default':
+                exchange_name = self.exchangeAccounts['Default Exchange']
+            if account_name.lower() == 'default':
+                account_name = self.exchangeAccounts['Default Account']                
         # The exchange name & account have been chosen. Now the appropriate API information is retrieved
             if self.exchangeAccounts[exchange_name][account_name]['apiKey'] == '':
                 self.fetch_API_key(exchange_name, account_name)
@@ -220,7 +236,7 @@ class ConnectToExchange:
         master_log_dataframe = pd.DataFrame(self.activityLog_Master)
         master_log_dataframe = master_log_dataframe.T
         master_log_dataframe.to_csv(self.activity_log_location + exchange_name + '_ActivityLog_Master.csv')
-        return(self.exchange)    
+        return(self.exchange)
 
 # This function is for retrieving API keys from a .txt file
 # Each file should have the API information for one account, end in '_API.txt', and have the API key on the first line and the API secret on the second line
