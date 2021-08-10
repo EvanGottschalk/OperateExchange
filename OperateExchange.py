@@ -221,6 +221,7 @@ class OperateExchange:
 
     def checkEndPriceInput(self, end_price_input):
         try:
+            print('IN:', end_price_input)
             end_price_input = float(end_price_input)
             symbol = self.orderSettings['Symbol']
             if end_price_input < 0:
@@ -233,7 +234,7 @@ class OperateExchange:
             elif symbol == 'LTC' or symbol == 'LTC/USD' or symbol == 'LTC/USDT':
                 end_price_input = round(float(end_price_input), 2)
             elif symbol == 'DOGE' or symbol == 'DOGE/USD' or symbol == 'DOGE/USDT':
-                end_price_input = round(float(end_price_input), 5)
+                end_price_input = round(float(end_price_input), 4)
             if self.orderSettings['Side'] == 'buy':
                 if end_price_input > self.orderSettings['Price']:
                     end_price_input = False
@@ -244,6 +245,7 @@ class OperateExchange:
                     print('\nERROR! OE Unable to create array order.\n    Cause: end price is too low for entry price.')
         except:
             end_price_input = False
+        print('OUT:', end_price_input)
         return(end_price_input)
 
     def checkSteepnessInput(self, steepness_input):
@@ -1250,6 +1252,12 @@ class OperateExchange:
             record_PNL = args[1]['Record PNL']
         except:
             record_PNL = False
+    # Maximum Amount: this is the maximum total value of orders to rebuild
+        try:
+            max_amount = args[1]['Maximum Amount']
+        except:
+            max_amount = False
+
     # These 'new' variables will replace entries in the arrayOrderLedger to update them
         new_active_orders = {}
         new_inactive_order_settings = []
@@ -1293,41 +1301,69 @@ class OperateExchange:
                     new_order_settings_by_ID[ID] = order_settings
         #orders_exist_in_a_row_count = 0
         #for order in array_of_orders:
-    # This rebuilds the orders that are missing & within range
+    # A dict of prices is constructed to ensure orders are rebuilt starting with the most profitable and ending with the least
+        price_dict = {}
         for ID in orders_to_rebuild:
-            order_settings = orders_to_rebuild[ID]
-            if record_PNL:
-                try:
-                    order = self.CTE.exchange.fetchOrder(symbol=order_settings['Symbol'], id=ID)
-                    if order['status'] == 'closed':
-                        if order['filled'] > 0:
-                            self.recordClosedOrder(order)
-                except:
-                    print('OE : Failed to record PNL of order ' + ID + ' while rebuilding an array order')
-            print('OE : Rebuilding ' + order_settings['Side'] + ' order for ' + str(order_settings['Amount']) + ' at $' + str(order_settings['Price']))
-            new_order = False
-            number_of_attempts = 0
-            while not(new_order):
-                number_of_attempts += 1
-                try:
-                    new_order = self.executeOrder(order_settings)
-                except Exception as error:
-                    self.CTE.inCaseOfError({'Description': 'rebuilding an array order', \
-                                            'Program': 'OE', \
-                                            'Error': error, \
-                                            '# of Attempts': number_of_attempts})
-                    new_order = False
-                    if number_of_attempts > 0:
-                        new_order = 'SKIP'
-                        print('OE : Rebuild of order for ' + str(order_settings['Amount']) + ' SKIPPED due to ' + str(number_of_attempts) + ' failed attempts!')
-            if new_order == 'SKIP':
-                new_order_settings_by_ID['FakeID_' + str(self.fake_ID_count)] = order_settings
-                self.fake_ID_count += 1
+            price_dict[orders_to_rebuild[ID]['Price']] = ID
+    # This rebuilds the orders that are missing & within range
+        if len(orders_to_rebuild) > 0:
+            cease_rebuild = False
+        else:
+            cease_rebuild = True
+        amount_rebuilt = 0
+        while not(cease_rebuild):
+            if array_order_side.lower() == 'buy':
+                ID = price_dict[min(price_dict)]
+                del price_dict[min(price_dict)]
             else:
-                new_active_orders[new_order['id']] = new_order
-                new_order_settings_by_ID[new_order['id']] = order_settings
-                new_total_amount += new_order['amount']
-            
+                ID = price_dict[max(price_dict)]
+                del price_dict[max(price_dict)]
+            order_settings = orders_to_rebuild[ID]
+            if max_amount:
+                if order_settings['Amount'] + amount_rebuilt >= max_amount:
+                    if amount_rebuilt >= max_amount:
+                        cease_rebuild = True
+                        print('OE : Rebuild CEASED! Maximum Amount of ' + str(max_amount) + ' was reached at ' + str(order_settings['Price']))
+                    else:
+                        order_settings['Amount'] = max_amount - amount_rebuilt
+                        print('OE : Rebuilding order at ' + str(order_settings['Price']) + ' with modified amount ' + str(order_settings['Amount']) + ' to fit within Maximum Amount.')
+            if not(cease_rebuild):
+                if record_PNL:
+                    try:
+                        order = self.CTE.exchange.fetchOrder(symbol=order_settings['Symbol'], id=ID)
+                        if order['status'] == 'closed':
+                            if order['filled'] > 0:
+                                self.recordClosedOrder(order)
+                    except:
+                        print('OE : Failed to record PNL of order ' + ID + ' while rebuilding an array order')
+                print('OE : Rebuilding ' + order_settings['Side'] + ' order for ' + str(order_settings['Amount']) + ' at $' + str(order_settings['Price']))
+                new_order = False
+                number_of_attempts = 0
+                while not(new_order):
+                    number_of_attempts += 1
+                    try:
+                        new_order = self.executeOrder(order_settings)
+                        amount_rebuilt += order_settings['Amount']
+                    except Exception as error:
+                        self.CTE.inCaseOfError({'Description': 'rebuilding an array order', \
+                                                'Program': 'OE', \
+                                                'Error': error, \
+                                                '# of Attempts': number_of_attempts})
+                        new_order = False
+                        if number_of_attempts > 0:
+                            new_order = 'SKIP'
+                            print('OE : Rebuild of order for ' + str(order_settings['Amount']) + ' SKIPPED due to ' + str(number_of_attempts) + ' failed attempts!')
+                if new_order == 'SKIP':
+                    new_order_settings_by_ID['FakeID_' + str(self.fake_ID_count)] = order_settings
+                    self.fake_ID_count += 1
+                else:
+                    new_active_orders[new_order['id']] = new_order
+                    new_order_settings_by_ID[new_order['id']] = order_settings
+                    new_total_amount += new_order['amount']
+            # Checks to see if all the orders have been rebuilt
+                if len(price_dict) == 0:
+                    cease_rebuild = True
+                
             #orders_exist_in_a_row_count = 0
 
 ##            if order_within_range:
@@ -1672,23 +1708,15 @@ class OperateExchange:
         except:
             cancel_side = False
         open_orders = False
-        number_of_attempts = 0
         while not(open_orders):
-            number_of_attempts += 1
             try:
                 open_orders = self.CTE.fetchOpenOrders({'Symbol': symbol})
-            except Exception as error:
-                self.CTE.inCaseOfError({'Description': 'fetching open orders to cancel an order group', \
-                                        'Program': 'OE', \
-                                        'Error': error, \
-                                        '# of Attempts': number_of_attempts})
-                open_orders = False
-            if number_of_attempts >= 5:
-                open_orders = 'give up'
-                orders_to_cancel = False
-                print('OE : FAILED to cancel order group! 5 attempts were made and none succeeded.')
-        if open_orders != 'give up':
-            orders_to_cancel = []
+                if open_orders == []:
+                    open_orders = 'empty list'
+            except:
+                open_orders = 'empty list'
+        orders_to_cancel = []
+        if open_orders != 'empty list':
             for order in open_orders:
                 try:
                     if order['status'] == 'closed':

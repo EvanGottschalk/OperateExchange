@@ -284,7 +284,7 @@ class ConnectToExchange:
             number_of_attempts += 1
             try:
             # This is the line that uses CCXT to actually get the information about the position
-                positions = self.exchange.fetch_positions(None, None, None, {'currency':'BTC'})
+                positions = self.exchange.fetch_positions(None, {'currency':'BTC'})
             except Exception as error:
                 positions = False
                 self.inCaseOfError({'Error': error, \
@@ -293,12 +293,15 @@ class ConnectToExchange:
                                     '# of Attempts': number_of_attempts})
     # positions_dict is a cleaned up version of the raw position information retrieved by exchange.fetch_positions()
         positions_dict = {}
-        positions_dict['Entry Price'] = positions[0]['avgEntryPrice']
+        positions_dict['Entry Price'] = float(positions[0]['avgEntryPrice'])
         positions_dict['Side'] = positions[0]['side']
-        positions_dict['Leverage'] = positions[0]['leverage']
-        positions_dict['Amount'] = positions[0]['size']
-        positions_dict['Liqudation Price'] = positions[0]['liquidationPrice']
-        positions_dict['Stop Loss'] = positions[0]['stopLoss']
+        positions_dict['Leverage'] = float(positions[0]['leverage'])
+        positions_dict['Amount'] = float(positions[0]['size'])
+        positions_dict['Liqudation Price'] = float(positions[0]['liquidationPrice'])
+        try:
+            positions_dict['Stop Loss'] = float(positions[0]['stopLoss'])
+        except:
+            positions_dict['Stop Loss'] = False
         positions_dict['Raw Positions List'] = positions
         if not(self.silent_mode):
             print('CTE : Current POSITION fetched')
@@ -1115,22 +1118,25 @@ class ConnectToExchange:
             symbol = args[0]['Symbol']
         except:
             symbol = 'BTC/USD'
-        open_orders = False
-        number_of_attempts = 0
-        while not(open_orders):
-            number_of_attempts += 1
-            try:
-                open_orders = self.exchange.fetchOpenOrders(symbol)
-                if open_orders == []:
-                    open_orders = 'empty list'
-            except Exception as error:
-                self.inCaseOfError({'Error': error, \
-                                    'Description': 'trying to fetch open orders', \
-                                    'Program': 'CTE', \
-                                    '# of Attempts': number_of_attempts})
-                open_orders = False
-        if open_orders == 'empty list':
+        try:
+            open_orders = self.exchange.fetchOpenOrders(symbol)
+        except:
             open_orders = []
+##        open_orders = False
+##        number_of_attempts = 0
+##        while not(open_orders):
+##            number_of_attempts += 1
+##            try:
+##                open_orders = self.exchange.fetchOpenOrders(symbol)
+##            except Exception as error:
+##                self.inCaseOfError({'Error': error, \
+##                                    'Description': 'trying to fetch open orders', \
+##                                    'Program': 'CTE', \
+##                                    '# of Attempts': number_of_attempts})
+##                open_orders = False
+##                print(number_of_attempts)
+##                if number_of_attempts >= 3:
+##                    open_orders = []
         if not(self.silent_mode):
             print('CTE : Open orders fetched!')
         return(open_orders)

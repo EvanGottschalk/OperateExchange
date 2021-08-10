@@ -17,9 +17,9 @@ class AudioPlayer:
         elif sound_title == 'Navi Hey Listen' or sound_title == 'Hey Listen':
             print('Audio : "Hey! Listen"')
             playsound(self.audio_file_location + 'Navi Hey Listen.mp3')
-        elif sound_title == 'Kill Bill Sirens' or sound_title == 'Kill Bill' or sound_title == 'Sirens':
+        elif sound_title == 'Kill Bill Siren' or sound_title == 'Kill Bill Sirens' or sound_title == 'Kill Bill' or sound_title == 'Siren' or sound_title == 'Sirens':
             print('Audio : *Kill Bill Sirens*')
-            playsound(self.audio_file_location + 'Navi Hey Listen.mp3')
+            playsound(self.audio_file_location + 'Kill Bill Siren.mp3')
         elif sound_title == 'Buffy Theme Song Ending Drumroll TRIMMED' or sound_title == 'Buffy Theme Song' or \
              sound_title == 'Buffy Drumroll' or sound_title == 'Buffy':
             print('Audio : *Buffy Drumroll*')
