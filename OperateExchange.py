@@ -1366,7 +1366,6 @@ class OperateExchange:
             # Checks to see if all the orders have been rebuilt
                 if len(price_dict) == 0:
                     cease_rebuild = True
-                
             #orders_exist_in_a_row_count = 0
 
 ##            if order_within_range:
@@ -1460,7 +1459,8 @@ class OperateExchange:
         self.arrayOrderLedger[array_order_number]['Ending Price'] = ending_price
         if original_exchange_name:
             self.CTE.connect(original_exchange_name)
-        return(new_active_orders)
+        return({'Rebuilt Orders': new_active_orders, \
+                'Amount Rebuilt': amount_rebuilt})
                 
         
 
