@@ -41,8 +41,8 @@ class OperateExchange:
                                    'Quick Granularity Intensity': False, \
                                    'Quick Granularity Start %': 'default', \
                                    'Quick Granularity End %': 'default', \
-                                   'Truncation Amount': False, \
-                                   'Readjust to Execute Truncation Amount': False}
+                                   'Maximum Amount': False, \
+                                   'Readjust to Execute Maximum Amount': False}
         self.arrayOrderStyles_dict = {'1': 'Uniform', \
                                       '2': 'Linear', \
                                       '3': 'Circular', \
@@ -276,16 +276,16 @@ class OperateExchange:
             minimum_order_size_input = False
         return(minimum_order_size_input)
 
-    def checkTruncationAmountInput(self, truncation_amount_input):
+    def checkMaximumAmountInput(self, maximum_amount_input):
         try:
-            truncation_amount_input = float(truncation_amount_input)
-            if truncation_amount_input < 0:
-                truncation_amount_input = False
-            elif truncation_amount_input > self.orderSettings['Amount']:
-                truncation_amount_input = self.orderSettings['Amount']
+            maximum_amount_input = float(maximum_amount_input)
+            if maximum_amount_input < 0:
+                maximum_amount_input = False
+            elif maximum_amount_input > self.orderSettings['Amount']:
+                maximum_amount_input = self.orderSettings['Amount']
         except:
-            truncation_amount_input = False
-        return(truncation_amount_input)
+            maximum_amount_input = False
+        return(maximum_amount_input)
 
     def checkQuickGranularityIntensityInput(self, quick_granularity_intensity_input):
         try:
@@ -389,13 +389,13 @@ class OperateExchange:
             except:
                 quick_granularity_intensity = False
             try:
-                truncation_amount = self.arrayOrderSettings['Truncation Amount']
+                maximum_amount = self.arrayOrderSettings['Maximum Amount']
             except:
-                truncation_amount = False
+                maximum_amount = False
             try:
-                readjust_to_execute_truncation_amount = self.arrayOrderSettings['Readjust to Execute Truncation Amount']
+                readjust_to_execute_maximum_amount = self.arrayOrderSettings['Readjust to Execute Maximum Amount']
             except:
-                readjust_to_execute_truncation_amount = False
+                readjust_to_execute_maximum_amount = False
             try:
                 slope = self.arrayOrderSettings['Slope']
             except:
@@ -403,8 +403,8 @@ class OperateExchange:
         else:
             style = ''
             quick_granularity_intensity = False
-            truncation_amount = False
-            readjust_to_execute_truncation_amount = False
+            maximum_amount = False
+            readjust_to_execute_maximum_amount = False
         #arg 0 : create order?
             try:
                 args[0].append('cancel_execution_attempt')
@@ -820,8 +820,17 @@ class OperateExchange:
                                     stored_amount += individual_order['Amount']                            
                 array_of_orders = new_array_of_orders
                 weighted_order_list = new_weighted_order_list
-        # If Truncation Amount is being used, this removes orders past a certain price point so the total amount of the array order is a specific amount
-            if truncation_amount:
+        # This reorganizes the array order so that smaller orders are always closer to the begining of the array than the end
+            new_array_of_orders = []
+            new_weighted_order_list = []
+            for order_index in range(len(array_of_orders)):
+                if order_index > 0:
+                    if array_of_orders[order_index]['Amount'] < array_of_orders[order_index - 1]['Amount']:
+                        larger_amount = array_of_orders[order_index - 1]['Amount']
+                        array_of_orders[order_index - 1]['Amount'] = array_of_orders[order_index]['Amount']
+                        array_of_orders[order_index]['Amount'] = larger_amount
+        # If Maximum Amount is being used, this removes orders past a certain price point so the total amount of the array order is a specific amount
+            if maximum_amount:
 ##                sum_of_order_amounts = 0
 ##                total_order_amount = 0
 ##                accumulate_orders = True
@@ -830,19 +839,19 @@ class OperateExchange:
 ##                for individual_order in array_of_orders:
 ##                    if accumulate_orders:
 ##                        sum_of_order_amounts += individual_order['Amount']
-##                        if sum_of_order_amounts < truncation_amount:
+##                        if sum_of_order_amounts < maximum_amount:
 ##                            new_array_of_orders.append(individual_order)
 ##                            total_order_amount += individual_order['Amount']
 ##                            new_weighted_order_list.append(individual_order['Amount'] * individual_order['Price'])
-##                        elif sum_of_order_amounts == truncation_amount:
+##                        elif sum_of_order_amounts == maximum_amount:
 ##                            accumulate_orders = False
 ##                            new_array_of_orders.append(individual_order)
 ##                            total_order_amount += individual_order['Amount']
 ##                            new_weighted_order_list.append(individual_order['Amount'] * individual_order['Price'])
-##                        elif sum_of_order_amounts > truncation_amount:
+##                        elif sum_of_order_amounts > maximum_amount:
 ##                            accumulate_orders = False
 ##                            ending_order_modified = 1
-##                            extra_amount = sum_of_order_amounts - truncation_amount
+##                            extra_amount = sum_of_order_amounts - maximum_amount
 ##                            individual_order['Amount'] -= extra_amount
 ##                            total_order_amount += individual_order['Amount']
 ##                            new_array_of_orders.append(individual_order)
@@ -850,16 +859,16 @@ class OperateExchange:
 ##                array_of_orders = new_array_of_orders
 ##                weighted_order_list = new_weighted_order_list
 ##                number_of_orders = len(array_of_orders)
-##                print('OE : Truncation Amount was applied and now the total order amount is ' + str(total_order_amount) + ' spread across ' + str(number_of_orders) + ' orders')
-                newArrayOrderInfo = self.applyTruncationAmount(array_of_orders, truncation_amount)
+##                print('OE : Maximum Amount was applied and now the total order amount is ' + str(total_order_amount) + ' spread across ' + str(number_of_orders) + ' orders')
+                newArrayOrderInfo = self.applyMaximumAmount(array_of_orders, maximum_amount)
                 total_order_amount = newArrayOrderInfo['Total Order Amount']
                 number_of_orders = newArrayOrderInfo['Total Number of Orders']
                 array_of_orders = newArrayOrderInfo['Array of Orders']
                 weighted_order_list = newArrayOrderInfo['Weighted Order List']
-                effective_amount = truncation_amount
-            # This will readjust the Truncation Amount so that the amounts of the orders that are on the wrong side of the current price and won't be executed
-            # can be added to the Truncation Amount. This will make it so that the sum of the amount of orders that get placed is equal to the truncation amount
-                if readjust_to_execute_truncation_amount:
+                effective_amount = maximum_amount
+            # This will readjust the Maximum Amount so that the amounts of the orders that are on the wrong side of the current price and won't be executed
+            # can be added to the Maximum Amount. This will make it so that the sum of the amount of orders that get placed is equal to the Maximum Amount
+                if readjust_to_execute_maximum_amount:
                     total_amount_too_small = True
                     last_sum_of_inexecutable_amounts = False
                     while total_amount_too_small:
@@ -873,30 +882,20 @@ class OperateExchange:
                                 if individual_order['Price'] < self.current_price:
                                     sum_of_inexecutable_amounts += individual_order['Amount']
                         if sum_of_inexecutable_amounts > 0:
-                            truncation_amount += sum_of_inexecutable_amounts
-                            self.OE.arrayOrderSettings['Truncation Amount'] = truncation_amount
-                            newArrayOrderInfo = self.applyTruncationAmount(array_of_orders, truncation_amount)
+                            maximum_amount += sum_of_inexecutable_amounts
+                            self.OE.arrayOrderSettings['Maximum Amount'] = maximum_amount
+                            newArrayOrderInfo = self.applyMaximumAmount(array_of_orders, maximum_amount)
                             total_order_amount = newArrayOrderInfo['Total Order Amount']
                             number_of_orders = newArrayOrderInfo['Total Number of Orders']
                             array_of_orders = newArrayOrderInfo['Array of Orders']
                             weighted_order_list = newArrayOrderInfo['Weighted Order List']
-                            print('OE : Truncation Amount READJUSTED to ' + str(adjusted_truncation_amount) + ' from ' + str(true_truncation_amount) + \
+                            print('OE : Maximum Amount READJUSTED to ' + str(adjusted_maximum_amount) + ' from ' + str(true_maximum_amount) + \
                                   ' because orders summing to ' + str(sum_of_inexecutable_amounts) + ' cannot to be placed because they are on the wrong side of the current price.')
         ##                else:
         ##                    total_amount_too_small = False
                         if sum_of_inexecutable_amounts == last_sum_of_inexecutable_amounts:
                             total_amount_too_small = False
                         last_sum_of_inexecutable_amounts = sum_of_inexecutable_amounts
-        # This reorganizes the array order so that smaller orders are always closer to the begining of the array than the end
-            new_array_of_orders = []
-            new_weighted_order_list = []
-            for order_index in range(len(array_of_orders)):
-                if order_index > 0:
-                    if array_of_orders[order_index]['Amount'] < array_of_orders[order_index - 1]['Amount']:
-                        larger_amount = array_of_orders[order_index - 1]['Amount']
-                        array_of_orders[order_index - 1]['Amount'] = array_of_orders[order_index]['Amount']
-                        array_of_orders[order_index]['Amount'] = larger_amount
-                order_index += 1
         # Slope - this changes the slope of the array order. NOTE - This changes the amount of the array order!
             if slope:
                 new_weighted_order_list = []
@@ -958,31 +957,35 @@ class OperateExchange:
                 if self.confirmation:
                     self.executeArrayOrders(array_of_orders)
 
-    def applyTruncationAmount(self, array_of_orders, truncation_amount):
+    def applyMaximumAmount(self, array_of_orders, maximum_amount):
         sum_of_order_amounts = 0
         total_order_amount = 0
         accumulate_orders = True
         new_array_of_orders = []
         new_weighted_order_list = []
-        for individual_order in array_of_orders:
-            if accumulate_orders:
-                sum_of_order_amounts += individual_order['Amount']
-                if sum_of_order_amounts < truncation_amount:
-                    new_array_of_orders.append(individual_order)
-                    total_order_amount += individual_order['Amount']
-                    new_weighted_order_list.append(individual_order['Amount'] * individual_order['Price'])
-                elif sum_of_order_amounts == truncation_amount:
-                    accumulate_orders = False
-                    new_array_of_orders.append(individual_order)
-                    total_order_amount += individual_order['Amount']
-                    new_weighted_order_list.append(individual_order['Amount'] * individual_order['Price'])
-                elif sum_of_order_amounts > truncation_amount:
-                    accumulate_orders = False
-                    extra_amount = sum_of_order_amounts - truncation_amount
-                    individual_order['Amount'] -= extra_amount
-                    total_order_amount += individual_order['Amount']
-                    new_array_of_orders.append(individual_order)
-                    new_weighted_order_list.append(individual_order['Amount'] * individual_order['Price'])
+        price_dict = {}
+        for order in array_of_orders:
+            price_dict[order['Price']] = order
+            array_order_side = order['Side']
+        while accumulate_orders:
+            if array_order_side.lower() == 'buy':
+                individual_order = price_dict[min(price_dict)]
+                del price_dict[min(price_dict)]
+            else:
+                individual_order = price_dict[max(price_dict)]
+                del price_dict[max(price_dict)]
+            sum_of_order_amounts += individual_order['Amount']
+            if sum_of_order_amounts < maximum_amount:
+                new_array_of_orders.append(individual_order)
+                total_order_amount += individual_order['Amount']
+                new_weighted_order_list.append(individual_order['Amount'] * individual_order['Price'])
+            elif sum_of_order_amounts >= maximum_amount:
+                accumulate_orders = False
+                extra_amount = sum_of_order_amounts - maximum_amount
+                individual_order['Amount'] -= extra_amount
+                total_order_amount += individual_order['Amount']
+                new_array_of_orders.append(individual_order)
+                new_weighted_order_list.append(individual_order['Amount'] * individual_order['Price'])
         array_of_orders = new_array_of_orders
         weighted_order_list = new_weighted_order_list
         number_of_orders = len(array_of_orders)
@@ -990,7 +993,7 @@ class OperateExchange:
                              'Total Number of Orders': number_of_orders, \
                              'Array of Orders': array_of_orders, \
                              'Weighted Order List': weighted_order_list}
-        print('OE : Truncation Amount was applied and now the total order amount is ' + str(total_order_amount) + ' spread across ' + str(number_of_orders) + ' orders')
+        print('OE : Maximum Amount was applied and now the total order amount is ' + str(total_order_amount) + ' spread across ' + str(number_of_orders) + ' orders')
         return(newArrayOrderInfo)
         
 
