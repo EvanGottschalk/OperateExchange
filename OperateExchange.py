@@ -392,6 +392,7 @@ class OperateExchange:
                 maximum_amount = self.arrayOrderSettings['Maximum Amount']
             except:
                 maximum_amount = False
+                self.arrayOrderSettings['Maximum Amount'] = False
             try:
                 readjust_to_execute_maximum_amount = self.arrayOrderSettings['Readjust to Execute Maximum Amount']
             except:
