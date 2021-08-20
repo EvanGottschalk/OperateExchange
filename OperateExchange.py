@@ -7,6 +7,8 @@ from QuadraticFormula import *
 # GetCurrentTime.py is used to get specific date and time information
 from GetCurrentTime import GetCurrentTime
 
+from AudioPlayer import AudioPlayer
+
 import copy
 import random
 import pandas as pd
@@ -21,6 +23,7 @@ def main():
 class OperateExchange:
     def __init__(self):
         self.confirmation = False
+        self.AP = AudioPlayer()
         self.CTE = ConnectToExchange()
         self.GCT = GetCurrentTime()
         self.orderSettings = {'Exchange': 'Coinbase', \
@@ -968,7 +971,7 @@ class OperateExchange:
         for order in array_of_orders:
             price_dict[order['Price']] = order
             array_order_side = order['Side']
-        while accumulate_orders:
+        while (accumulate_orders) and (len(price_dict) > 0):
             if array_order_side.lower() == 'buy':
                 individual_order = price_dict[min(price_dict)]
                 del price_dict[min(price_dict)]
@@ -987,6 +990,9 @@ class OperateExchange:
                 total_order_amount += individual_order['Amount']
                 new_array_of_orders.append(individual_order)
                 new_weighted_order_list.append(individual_order['Amount'] * individual_order['Price'])
+        if accumulate_orders:
+            print('OE : Strange occurence - the price_dict became empty before the Maximum Amount was reached!')
+            self.AP.playSound('Tim Allen Huh')
         array_of_orders = new_array_of_orders
         weighted_order_list = new_weighted_order_list
         number_of_orders = len(array_of_orders)
@@ -1315,7 +1321,7 @@ class OperateExchange:
         else:
             cease_rebuild = True
         amount_rebuilt = 0
-        while not(cease_rebuild):
+        while not(cease_rebuild) and (len(price_dict) > 0):
             if array_order_side.lower() == 'buy':
                 ID = price_dict[min(price_dict)]
                 del price_dict[min(price_dict)]
@@ -1367,66 +1373,9 @@ class OperateExchange:
             # Checks to see if all the orders have been rebuilt
                 if len(price_dict) == 0:
                     cease_rebuild = True
-            #orders_exist_in_a_row_count = 0
-
-##            if order_within_range:
-##                if not(quick_rebuild) or (quick_rebuild and (orders_exist_in_a_row_count < 3)):                
-##                    #try:
-####                    order = False
-####                    while not(order):
-##                    try:
-##                        order = self.CTE.exchange.fetchOrder(symbol=order['symbol'], id=order['id'])
-##                    except:
-####                        self.CTE.inCaseOfError({'Description': 'checking an order while rebuilding an array order', \
-####                                                'Program': 'OE'})
-##                        order = {'status': 'missing'}
-##                    if order['status'] == 'open':
-##                            new_array_of_orders.append(order)
-##                            orders_exist_in_a_row_count += 1
-##                    else:
-##                        # This adds the PNL to the history if the missing order was closed
-##                        if order['status'] == 'closed':
-##                            if order['filled'] > 0:
-##                                self.recordClosedOrder(order)
-##                    # Creates the replacement order
-##                        order_parameters = {}
-##                        order_parameters['Exchange'] = self.arrayOrderLedger[array_order_number]['Order Settings']['Exchange']
-##                        order_parameters['Account'] = self.arrayOrderLedger[array_order_number]['Order Settings']['Account']
-##                        order_parameters['Symbol'] = self.arrayOrderLedger[array_order_number]['Order Settings']['Symbol']
-##                        order_parameters['Side'] = self.arrayOrderLedger[array_order_number]['Order Settings']['Side']
-##                        order_parameters['Amount'] = self.arrayOrderLedger[array_order_number]['Individual Order Settings'][count]['Amount']
-##                        order_parameters['Order Type'] = self.arrayOrderLedger[array_order_number]['Order Settings']['Order Type']
-##                        order_parameters['Price'] = self.arrayOrderLedger[array_order_number]['Individual Order Settings'][count]['Price']
-####                        if order['amount'] == 0:
-####                            print('*** Order amount is 0 for some reason:\n', order)
-##                        new_order = False
-##                        while not(new_order):
-##                            try:
-##                                new_order = self.executeOrder(order_parameters)
-##                            except:
-##                                self.CTE.inCaseOfError({'Description': 'rebuilding an array order', \
-##                                                        'Program': 'OE'})
-##                                new_order = False
-##                        print('OE : Rebuilding ' + order_parameters['Side'] + ' order for ' + str(order_parameters['Amount']) + ' at $' + str(order_parameters['Price']))
-##                        new_array_of_orders.append(new_order)
-##                        orders_exist_in_a_row_count = 0
-        ##            except:
-        ##                print(order)
-        ##                order_parameters = {}
-        ##                order_parameters['Exchange'] = self.arrayOrderLedger[array_order_number]['Order Settings']['Exchange']
-        ##                order_parameters['Account'] = self.arrayOrderLedger[array_order_number]['Order Settings']['Account']
-        ##                order_parameters['Symbol'] = self.arrayOrderLedger[array_order_number]['Order Settings']['Symbol']
-        ##                order_parameters['Side'] = self.arrayOrderLedger[array_order_number]['Order Settings']['Side']
-        ##                order_parameters['Amount'] = order['amount']
-        ##                order_parameters['Order Type'] = self.arrayOrderLedger[array_order_number]['Order Settings']['Order Type']
-        ##                order_parameters['Price'] = order['price']
-        ##                new_order = self.executeOrder(order_parameters)
-        ##                new_array_of_orders.append(new_order)
-##                else:
-##                    new_array_of_orders.append(order)
-##            else:
-##                new_array_of_orders.append(order)
-##            count+=1
+        if not(cease_rebuild):
+            print('OE : Strange rebuild occurence - the price_dict became empty before the Maximum Amount was reached!')
+            self.AP.playSound('Tim Allen Huh')
     # These loops iterate through the new list of active orders to determine the new starting and end prices
         starting_price = False
         ending_price = False
