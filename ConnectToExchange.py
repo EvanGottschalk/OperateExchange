@@ -95,6 +95,7 @@ class ConnectToExchange:
         self.availableSymbols = {}
     # EMA_smoother is an int that is used in calculating exponential moving averages. The most common value to use is 2. Feel free to change it
         self.EMA_smoother = 2
+        self.balances = False
         self.exchange = False
 
     def main_loop(self):
@@ -198,6 +199,9 @@ class ConnectToExchange:
         timestamp = self.GCT.getTimeStamp()
         time = self.GCT.getTimeString()
         self.availableSymbols[exchange_name] = list(self.exchange.loadMarkets())
+    # If balances have already been fetched, they may refer to a different exchange or account. This updates self.balances to prevent confusion
+        if self.balances:
+            self.balances = self.getBalances()
       # This section creates new entries in the Master Activity Log and Daily Activity Logs if they have not been used yet
         try:
             self.activityLog_Master = pickle.load(open(self.activity_log_location + exchange_name + '_ActivityLog_Master.pickle', 'rb'))
@@ -385,46 +389,76 @@ class ConnectToExchange:
                 
 # This function retrieves one's current account balances
     def getBalances(self, *args):
+        self.balances = {}
+    # Optional inputs, such as a cryptocurrency symbol, an exchange name, and an account name are interpreted from the input(s)
         if len(args) > 0:
-            self.connect(args[len(args) - 1])
-        try:
-            for accountName in self.exchangeAccounts[self.currentConnectionDetails['Exchange Name']]:
-                if self.currentConnectionDetails['Exchange Name'] == 'Binance':
-                    try:
-                        shit = self.exchange
-                    except:
-                        self.connect('binance')
-                    self.balances = self.exchange.fetch_balance()
-                elif self.currentConnectionDetails['Exchange Name'] == 'Kraken':
-                    self.connect('Kraken ' + accountName)
-                    try:
-                        shit = self.balances
-                        subAccountBalances = self.exchange.fetch_balance()
-                        for key in subAccountBalances:
-                            if key != 'info':
-                                for key_B in subAccountBalances[key]:
-                                    self.balances[key][key_B] += subAccountBalances[key][key_B]
-                    except:
-                        self.balances = self.exchange.fetch_balance()
-            # Creates a list of every symbol currently on the exchange
-            self.symbols_All = []
-            for key in self.balances:
-                if (key != 'info') and (key != 'free') and \
-                   (key != 'used') and (key != 'total') and \
-                   (key != 'USDT'):
-                    if key == 'BTC':
-                        self.symbols_All.append(key + '/USDT')
+            if type(args[0]) == str:
+                symbol = args[0]
+            elif type(args[0]) == dict:
+                try:
+                    symbol = args[0]['Symbol']
+                except:
+                    symbol = 'all'
+                try:
+                    exchange_name = args[0]['Exchange Name']
+                except:
+                    exchange_name = False
+                try:
+                    account_name = args[0]['Account Name']
+                except:
+                    account_name = False
+                if exchange_name:
+                    if account_name:
+                        self.connect(exchange_name, account_name)
                     else:
-                        self.symbols_All.append(key + '/BTC')
-            return(self.balances)
-        except ccxt.DDoSProtection as e:
-            print(type(e).__name__, e.args, 'DDoS Protection (ignoring)')
-        except ccxt.RequestTimeout as e:
-            print(type(e).__name__, e.args, 'Request Timeout (ignoring)')
-        except ccxt.ExchangeNotAvailable as e:
-            print(type(e).__name__, e.args, 'Exchange Not Available due to downtime or maintenance (ignoring)')
-        except ccxt.AuthenticationError as e:
-            print(type(e).__name__, e.args, 'Authentication Error (missing API keys, ignoring)')
+                        self.connect(exchange_name, 'default')
+                else:
+                    if account_name:
+                        self.connect('default', account_name)
+                    else:
+                        self.connect('default')
+        else:
+            symbol = 'all'
+        if not(self.exchange):
+            self.connect()
+        exchange_name = self.currentConnectionDetails['Exchange Name']
+    # Spot Wallet balances are fetched and organized
+        try:
+            raw_spot_balances = self.exchange.fetch_balance()
+            spot_balances = {}
+            for key in raw_spot_balances:
+                if key == key.upper():
+                    if (symbol == 'all') or (key == symbol.upper()):
+                        spot_balances[key] = raw_spot_balances[key]                    
+            self.balances['Spot'] = spot_balances
+        except Exception as error:
+            self.inCaseOfError({'Error': error, \
+                                'Description': 'fetching Spot balances', \
+                                'Pause Time': 0, \
+                                'Program': 'CTE', \
+                                '# of Attempts': '1'})
+    # Contract Trade Account balances are fetched and organized
+        contract_balances = {}
+        for available_symbol in self.availableSymbols[exchange_name]:
+            if (symbol == 'all') or (available_symbol == symbol.upper()):
+                available_symbol = available_symbol.split('/')[0]
+                contract_balances[available_symbol] = {}
+                try:
+                    if available_symbol == 'BTC':
+                        raw_contract_balance = self.exchange.fetch_balance(params={'type': 'swap', 'currency': available_symbol})
+                        contract_balances[available_symbol]['free'] = float(raw_contract_balance[available_symbol]['free'])
+                        contract_balances[available_symbol]['used'] = float(raw_contract_balance[available_symbol]['used'])
+                        contract_balances[available_symbol]['total'] = float(raw_contract_balance[available_symbol]['total'])
+                        contract_balances[available_symbol]['dict'] = raw_contract_balance
+                except Exception as error:
+                    self.inCaseOfError({'Error': error, \
+                                        'Description': 'fetching ' + available_symbol + ' Contract balance', \
+                                        'Pause Time': 0, \
+                                        'Program': 'CTE', \
+                                        '# of Attempts': '1'})
+        self.balances['Contract'] = contract_balances
+        return(self.balances)
+
 
 # This function retrieves the user's balances but leaves out symbols that the user doesn't have any of
     def getNonzeroBalances(self, *args):
