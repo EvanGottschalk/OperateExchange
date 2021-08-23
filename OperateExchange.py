@@ -887,13 +887,13 @@ class OperateExchange:
                                     sum_of_inexecutable_amounts += individual_order['Amount']
                         if sum_of_inexecutable_amounts > 0:
                             maximum_amount += sum_of_inexecutable_amounts
-                            self.OE.arrayOrderSettings['Maximum Amount'] = maximum_amount
+                            self.arrayOrderSettings['Maximum Amount'] = maximum_amount
                             newArrayOrderInfo = self.applyMaximumAmount(array_of_orders, maximum_amount)
                             total_order_amount = newArrayOrderInfo['Total Order Amount']
                             number_of_orders = newArrayOrderInfo['Total Number of Orders']
                             array_of_orders = newArrayOrderInfo['Array of Orders']
                             weighted_order_list = newArrayOrderInfo['Weighted Order List']
-                            print('OE : Maximum Amount READJUSTED to ' + str(adjusted_maximum_amount) + ' from ' + str(true_maximum_amount) + \
+                            print('OE : Maximum Amount READJUSTED to ' + str(maximum_amount) + ' from ' + str(true_maximum_amount) + \
                                   ' because orders summing to ' + str(sum_of_inexecutable_amounts) + ' cannot to be placed because they are on the wrong side of the current price.')
         ##                else:
         ##                    total_amount_too_small = False
@@ -917,12 +917,13 @@ class OperateExchange:
         # Assigns values to arrayOrderParameters dict
             self.arrayOrderParameters['Number of Orders'] = len(array_of_orders)
             self.arrayOrderParameters['Total Order Amount'] = total_order_amount
-            if self.orderSettings['Side'] == 'sell':
+        # When a Maximum Amount is used, orders are created in reverse, so maximum_amount affects whether the lowest-priced order is at the start or end
+            if (self.orderSettings['Side'] == 'sell' and not(maximum_amount)) or (self.orderSettings['Side'] == 'buy' and maximum_amount):
                 self.arrayOrderParameters['Lowest Price Order Amount'] = array_of_orders[0]['Amount']
                 self.arrayOrderParameters['Lowest Price Order Price'] = array_of_orders[0]['Price']
                 self.arrayOrderParameters['Highest Price Order Amount'] = array_of_orders[len(array_of_orders) - 1]['Amount']
                 self.arrayOrderParameters['Highest Price Order Price'] = array_of_orders[len(array_of_orders) - 1]['Price']
-            elif self.orderSettings['Side'] == 'buy':
+            elif (self.orderSettings['Side'] == 'buy' and not(maximum_amount)) or (self.orderSettings['Side'] == 'sell' and maximum_amount):
                 self.arrayOrderParameters['Lowest Price Order Amount'] = array_of_orders[len(array_of_orders) - 1]['Amount']
                 self.arrayOrderParameters['Lowest Price Order Price'] = array_of_orders[len(array_of_orders) - 1]['Price']
                 self.arrayOrderParameters['Highest Price Order Amount'] = array_of_orders[0]['Amount']
@@ -1643,7 +1644,7 @@ class OperateExchange:
                         print('OE : ERROR! Failed to record missing order!')
             self.arrayOrderHistory[array_order_number]['Inactive Orders'].append(order)
 ##        try:
-##            del self.OE.arrayOrderLedger[array_order_number]
+##            del self.arrayOrderLedger[array_order_number]
 ##        except:
 ##            print('----------- ERROR! Failed to delete order from arrayOrderLedger! ---------------')
 
