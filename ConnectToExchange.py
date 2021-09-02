@@ -2,10 +2,11 @@
 
 import os
 import sys
+import traceback
+
 import pickle
 import math
 import pathlib
-
 import pandas as pd
 from datetime import datetime
 
@@ -291,10 +292,11 @@ class ConnectToExchange:
                 positions = self.exchange.fetch_positions(None, {'currency':'BTC'})
             except Exception as error:
                 positions = False
-                self.inCaseOfError({'Error': error, \
-                                    'Description': 'fetching positions', \
-                                    'Program': 'CTE', \
-                                    '# of Attempts': number_of_attempts})
+                self.inCaseOfError(**{'Error': error, \
+                                      'Description': 'fetching positions', \
+                                      'Program': 'CTE', \
+                                      'Line #': traceback.format_exc().split('line ')[1].split(',')[0], \
+                                      '# of Attempts': number_of_attempts})
     # positions_dict is a cleaned up version of the raw position information retrieved by exchange.fetch_positions()
         positions_dict = {}
         positions_dict['Entry Price'] = float(positions[0]['avgEntryPrice'])
@@ -432,11 +434,11 @@ class ConnectToExchange:
                         spot_balances[key] = raw_spot_balances[key]                    
             self.balances['Spot'] = spot_balances
         except Exception as error:
-            self.inCaseOfError({'Error': error, \
-                                'Description': 'fetching Spot balances', \
-                                'Pause Time': 0, \
-                                'Program': 'CTE', \
-                                '# of Attempts': '1'})
+            self.inCaseOfError(**{'Error': error, \
+                                  'Description': 'fetching Spot balances', \
+                                  'Pause Time': 0, \
+                                  'Program': 'CTE', \
+                                  'Line #': traceback.format_exc().split('line ')[1].split(',')[0]})
     # Contract Trade Account balances are fetched and organized
         contract_balances = {}
         for available_symbol in self.availableSymbols[exchange_name]:
@@ -451,11 +453,11 @@ class ConnectToExchange:
                         contract_balances[available_symbol]['total'] = float(raw_contract_balance[available_symbol]['total'])
                         contract_balances[available_symbol]['dict'] = raw_contract_balance
                 except Exception as error:
-                    self.inCaseOfError({'Error': error, \
-                                        'Description': 'fetching ' + available_symbol + ' Contract balance', \
-                                        'Pause Time': 0, \
-                                        'Program': 'CTE', \
-                                        '# of Attempts': '1'})
+                    self.inCaseOfError(**{'Error': error, \
+                                          'Description': 'fetching ' + available_symbol + ' Contract balance', \
+                                          'Pause Time': 0, \
+                                          'Program': 'CTE', \
+                                          'Line #': traceback.format_exc().split('line ')[1].split(',')[0]})
         self.balances['Contract'] = contract_balances
         return(self.balances)
 
@@ -1131,10 +1133,11 @@ class ConnectToExchange:
             try:
                 current_price = self.exchange.fetchTicker(symbol)['bid']
             except Exception as error:
-                self.inCaseOfError({'Error': error, \
-                                    'Description': 'checking the current BTC price', \
-                                    'Program': 'CTE', \
-                                    '# of Attempts': number_of_attempts})
+                self.inCaseOfError(**{'Error': error, \
+                                      'Description': 'checking the current BTC price', \
+                                      'Program': 'CTE', \
+                                      'Line #': traceback.format_exc().split('line ')[1].split(',')[0], \
+                                      '# of Attempts': number_of_attempts})
                 current_price = False
                 if number_of_attempts % 5 == 0:
                     self.connect(self.exchangeAccounts['Default'])
@@ -1163,7 +1166,7 @@ class ConnectToExchange:
 ##            try:
 ##                open_orders = self.exchange.fetchOpenOrders(symbol)
 ##            except Exception as error:
-##                self.inCaseOfError({'Error': error, \
+##                self.inCaseOfError(**{'Error': error, \
 ##                                    'Description': 'trying to fetch open orders', \
 ##                                    'Program': 'CTE', \
 ##                                    '# of Attempts': number_of_attempts})
@@ -1195,30 +1198,9 @@ class ConnectToExchange:
         updated_master_OHLCVs.to_csv(str(pathlib.Path().absolute()) + '/_OHLCV_Repository/Master ' + timeframe + ' OHLCVs.csv')
         
 # This function displays a message in case there is an error, and saves the information about the error to a CSV log
-    def inCaseOfError(self, *args):
-        try:
-            error = args[0]['Error']
-        except:
-            error = 'Error Not Provided'
-        try:
-            description = args[0]['Description']
-        except:
-            description = '...doing something'
-        try:
-            pause_time = args[0]['Pause Time']
-        except:
-            pause_time = 5
-        try:
-            program = args[0]['Program']
-        except:
-            program = 'Program Not Provided'
-        try:
-            number_of_attempts = args[0]['# of Attempts']
-        except:
-            number_of_attempts = '# of Attempts Not Provided'
-        print(program + ' : !!! ERROR occurred while ' + description)
+    def inCaseOfError(self, error=None, description=None, pause_time=0, program=None, line_number=None, number_of_attempts=1):
+        print(program + ' : !!! ERROR occurred on line ' + str(line_number) + ' while ' + description)
         print(program + ' : Error: ' + str(error))
-        print('CTE : Pausing for ' + str(pause_time) + ' seconds')
         pause_for_error = True
         starting_second = int(self.GCT.getTimeStamp())
         starting_datetime = self.GCT.getDateTimeString()
@@ -1226,14 +1208,17 @@ class ConnectToExchange:
                       'Error': error, \
                       'Description': description, \
                       'Program': program, \
+                      'Line #': line_number, \
                       '# of Attempts': number_of_attempts}
         self.errorLog.append(error_dict)
         self.AP.playSound('Navi Hey')
-        while pause_for_error:
-            current_second = int(self.GCT.getTimeStamp())
-            if current_second - starting_second > pause_time:
-                pause_for_error = False
-        print('CTE : Pause over! Returning to ' + description)
+        if pause_time > 0:
+            print('CTE : Pausing for ' + str(pause_time) + ' seconds')
+            while pause_for_error:
+                current_second = int(self.GCT.getTimeStamp())
+                if current_second - starting_second > pause_time:
+                    pause_for_error = False
+            print('CTE : Pause over! Returning to ' + description)
         return(error_dict)
         
 # This will create the ConnectToExchange class in a non-local scope, making it more secure

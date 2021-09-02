@@ -1160,12 +1160,11 @@ class OperateExchange:
 
     def executeArrayOrders(self, array_of_orders):
         order_count = 0
-        starting_price = False
-        ending_price = False
         new_active_orders = {}
         inactive_order_settings = []
         all_orders = []
         order_settings_by_ID = {}
+        order_settings_by_price = {}
         total_amount = 0
         side = array_of_orders[0]['Side']
         self.current_price = self.CTE.exchange.fetchTicker(array_of_orders[0]['Symbol'])['bid']
@@ -1188,9 +1187,7 @@ class OperateExchange:
                         inactive_order_settings.append(order_settings)
                     total_amount += float(order['amount'])
                     order_settings_by_ID[order['id']] = order_settings
-                    if not(starting_price):
-                        starting_price = order['price']
-                    ending_price = order['price']
+                    order_settings_by_price[order['price']] = order_settings
                 except:
                     print('!!!!!!!!!!!!     ERROR! Failed to post order:', order_settings)
                     failed_to_post = True
@@ -1207,9 +1204,15 @@ class OperateExchange:
         self.arrayOrderLedger[array_order_number]['Active Orders'] = new_active_orders
         #self.arrayOrderLedger[array_order_number]['Inactive Order Settings'] = inactive_order_settings
         self.arrayOrderLedger[array_order_number]['Order Settings by ID'] = order_settings_by_ID
-        self.arrayOrderLedger[array_order_number]['Starting Price'] = starting_price
-        self.arrayOrderLedger[array_order_number]['Ending Price'] = ending_price
         self.arrayOrderLedger[array_order_number]['Total Amount'] = total_amount
+        self.arrayOrderLedger[array_order_number]['Lowest Price Order'] = order_settings_by_price[min(order_settings_by_price)]
+        self.arrayOrderLedger[array_order_number]['Highest Price Order'] = order_settings_by_price[max(order_settings_by_price)]
+        if side == 'buy':
+            self.arrayOrderLedger[array_order_number]['Starting Price'] = self.arrayOrderLedger[array_order_number]['Highest Price Order']
+            self.arrayOrderLedger[array_order_number]['Ending Price'] = self.arrayOrderLedger[array_order_number]['Lowest Price Order']
+        else:
+            self.arrayOrderLedger[array_order_number]['Starting Price'] = self.arrayOrderLedger[array_order_number]['Lowest Price Order']
+            self.arrayOrderLedger[array_order_number]['Ending Price'] = self.arrayOrderLedger[array_order_number]['Highest Price Order']        
         self.arrayOrderHistory[array_order_number] = {'Inactive Orders': []}
         return(self.arrayOrderLedger[array_order_number])
 
@@ -1356,10 +1359,11 @@ class OperateExchange:
                         new_order = self.executeOrder(order_settings)
                         amount_rebuilt += order_settings['Amount']
                     except Exception as error:
-                        self.CTE.inCaseOfError({'Description': 'rebuilding an array order', \
-                                                'Program': 'OE', \
-                                                'Error': error, \
-                                                '# of Attempts': number_of_attempts})
+                        self.CTE.inCaseOfError(**{'Error': error, \
+                                                  'Description': 'rebuilding an array order', \
+                                                  'Program': 'OE', \
+                                                  'Line #': traceback.format_exc().split('line ')[1].split(',')[0], \
+                                                  '# of Attempts': number_of_attempts})
                         new_order = False
                         if number_of_attempts > 0:
                             new_order = 'SKIP'
