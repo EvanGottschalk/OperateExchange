@@ -521,6 +521,8 @@ class OperateExchange:
         self.arrayOrderSettings['Style'] = style
         self.arrayOrderSettings['Multiplicative Factor'] = multiplicative_factor
         effective_amount = self.orderSettings['Amount']
+        price = self.orderSettings['Price']
+        side = self.orderSettings['Side']
         if 1 < 0:#self.orderSettings['Amount'] < spread / granularity:
             print('\n!!! Array Order Error! Unable to create array order. Cause: spread is too large for the trade amount.')
         else:
@@ -744,8 +746,12 @@ class OperateExchange:
                 storage_duration = 0
                 new_array_of_orders = []
                 new_weighted_order_list = []
-                qg_start_price = None
-                qg_end_price = 0
+                if side == 'buy':
+                    qg_start_price = price - (qg_start_percent * spread)
+                    qg_end_price = price - (qg_end_percent * spread)
+                else:
+                    qg_start_price = price + (qg_start_percent * spread)
+                    qg_end_price = price + (qg_end_percent * spread)
                 for individual_order in array_of_orders:
                     order_count += 1
                     if quick_granularity_intensity == 'Medium':
@@ -757,9 +763,6 @@ class OperateExchange:
                         if (order_count >= (number_of_orders * qg_start_percent)) and (order_count < (number_of_orders * qg_end_percent)):
                             new_array_of_orders.append(individual_order)
                             new_weighted_order_list.append(individual_order['Amount'] * individual_order['Price'])
-                            if not(qg_start_price):
-                                qg_start_price = individual_order['Price']
-                            qg_end_price = individual_order['Price']
                         else:
                             if (storage_duration == 0) or (order_count == number_of_orders):
                                 individual_order['Amount'] = individual_order['Amount'] + stored_amount
@@ -796,9 +799,6 @@ class OperateExchange:
                         else:
                             new_array_of_orders.append(individual_order)
                             new_weighted_order_list.append(individual_order['Amount'] * individual_order['Price'])
-                            if not(qg_start_price):
-                                qg_start_price = individual_order['Price']
-                            qg_end_price = individual_order['Price']
                     elif type(quick_granularity_intensity) == int:
                         if quick_granularity_intensity > 0:
                             if qg_start_percent == 'default':
@@ -810,9 +810,6 @@ class OperateExchange:
                             if (order_count >= (number_of_orders * qg_start_percent)) and (order_count < (number_of_orders * qg_end_percent)):
                                 new_array_of_orders.append(individual_order)
                                 new_weighted_order_list.append(individual_order['Amount'] * individual_order['Price'])
-                                if not(qg_start_price):
-                                    qg_start_price = individual_order['Price']
-                                qg_end_price = individual_order['Price']
                             else:
                                 if order_count == number_of_orders:
                                     ending_price = individual_order['Price']
@@ -834,14 +831,16 @@ class OperateExchange:
                 array_of_orders = new_array_of_orders
                 weighted_order_list = new_weighted_order_list
                 number_of_orders = len(array_of_orders)
-                spread_modifier_beyond_qg = 2
-                if spread_modifier_beyond_qg:
+                spread_modifier_beyond_qg = 4
+                price_modifier = spread_modifier_beyond_qg - 1
+                if price_modifier > 0:
                     new_array_of_orders = []
                     new_weighted_order_list = []
                     order_count = 0
                     quick_granularity_order_count = 0
                     slow_granularity_spread = spread * (1 - qg_end_percent)
                     print('slow_granularity_spread', slow_granularity_spread)
+                    print('qg_end_price', qg_end_price)
                     for order in array_of_orders:
                         order_count += 1
                         new_order = order
@@ -862,7 +861,8 @@ class OperateExchange:
                             else:
                                 percent_into_slow_granularity = (order['Price'] - qg_end_price) / slow_granularity_spread
                                 print('percent_into_slow_granularity', percent_into_slow_granularity)
-                                new_order['Price'] += (percent_into_slow_granularity * slow_granularity_spread)
+                                price_modification = price_modifier * (percent_into_slow_granularity * slow_granularity_spread)
+                                new_order['Price'] += price_modification
 ##                                if not(slow_granularity):
 ##                                    slow_granularity = array_of_orders[order_count]['Price'] - order['Price']
 ##                                modification_multiplier = max(spread_modifier_beyond_qg - 1, 0)
