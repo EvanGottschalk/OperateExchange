@@ -41,10 +41,11 @@ class OperateExchange:
                                    'Minimum Order Size': 1, \
                                    'Style': 'Linear', \
                                    'Multiplicative Factor': 1, \
-                                   'Quick Granularity Intensity': False, \
+                                   'Quick Granularity Intensity': None, \
                                    'Quick Granularity Start %': 'default', \
                                    'Quick Granularity End %': 'default', \
-                                   'Maximum Amount': False, \
+                                   'Spread Modifier Beyond Quick Granularity': None, \
+                                   'Maximum Amount': None, \
                                    'Readjust to Execute Maximum Amount': False}
         self.arrayOrderStyles_dict = {'1': 'Uniform', \
                                       '2': 'Linear', \
@@ -224,7 +225,6 @@ class OperateExchange:
 
     def checkEndPriceInput(self, end_price_input):
         try:
-            print('IN:', end_price_input)
             end_price_input = float(end_price_input)
             symbol = self.orderSettings['Symbol']
             if end_price_input < 0:
@@ -248,7 +248,6 @@ class OperateExchange:
                     print('\nERROR! OE Unable to create array order.\n    Cause: end price is too low for entry price.')
         except:
             end_price_input = False
-        print('OUT:', end_price_input)
         return(end_price_input)
 
     def checkSteepnessInput(self, steepness_input):
@@ -386,9 +385,11 @@ class OperateExchange:
                 try:
                     qg_start_percent = self.arrayOrderSettings['Quick Granularity Start %']
                     qg_end_percent = self.arrayOrderSettings['Quick Granularity End %']
+                    spread_modifier_beyond_qg = self.arrayOrderSettings['Spread Modifier Beyond Quick Granularity']
                 except:
                     qg_start_percent = 'default'
                     qg_end_percent = 'default'
+                    spread_modifier_beyond_qg = None
             except:
                 quick_granularity_intensity = False
             try:
@@ -743,7 +744,7 @@ class OperateExchange:
                 storage_duration = 0
                 new_array_of_orders = []
                 new_weighted_order_list = []
-                qg_start_price = False
+                qg_start_price = None
                 qg_end_price = 0
                 for individual_order in array_of_orders:
                     order_count += 1
@@ -813,15 +814,62 @@ class OperateExchange:
                                     qg_start_price = individual_order['Price']
                                 qg_end_price = individual_order['Price']
                             else:
-                                if (storage_duration == 0) or (order_count == number_of_orders):
-                                    individual_order['Amount'] = individual_order['Amount'] + stored_amount
+                                if order_count == number_of_orders:
+                                    ending_price = individual_order['Price']
+                                    ending_amount = individual_order['Amount']
+                                    new_array_of_orders[len(new_array_of_orders) - 1]['Price'] = individual_order['Price']
+                                    new_array_of_orders[len(new_array_of_orders) - 1]['Amount'] += individual_order['Amount']
+                                    new_array_of_orders[len(new_array_of_orders) - 1]['Amount'] += stored_amount
+                                    new_weighted_order_list[len(new_weighted_order_list) - 1] = new_array_of_orders[len(new_array_of_orders) - 1]['Amount'] * \
+                                                                                                new_array_of_orders[len(new_array_of_orders) - 1]['Price']
+                                elif storage_duration == 0:
+                                    individual_order['Amount'] += stored_amount
                                     stored_amount = 0
                                     storage_duration = quick_granularity_intensity
                                     new_array_of_orders.append(individual_order)
                                     new_weighted_order_list.append(individual_order['Amount'] * individual_order['Price'])
                                 else:
                                     storage_duration -= 1
-                                    stored_amount += individual_order['Amount']                            
+                                    stored_amount += individual_order['Amount']
+                array_of_orders = new_array_of_orders
+                weighted_order_list = new_weighted_order_list
+                number_of_orders = len(array_of_orders)
+                spread_modifier_beyond_qg = 2
+                if spread_modifier_beyond_qg:
+                    new_array_of_orders = []
+                    new_weighted_order_list = []
+                    order_count = 0
+                    quick_granularity_order_count = 0
+                    slow_granularity_spread = spread * (1 - qg_end_percent)
+                    print('slow_granularity_spread', slow_granularity_spread)
+                    for order in array_of_orders:
+                        order_count += 1
+                        new_order = order
+                        print(order['Price'], order['Amount'])
+                        if new_order['Side'].lower() == 'buy':
+                            if order['Price'] >= qg_end_price:
+                                quick_granularity_order_count += 1
+                            else:
+                                if not(slow_granularity):
+                                    slow_granularity = order['Price'] - array_of_orders[order_count]['Price']
+                                else:
+                                    modification_multiplier = max(spread_modifier_beyond_qg - 1, 0)
+                                    new_order['Price'] -= (modification_multiplier * (slow_granularity * (order_count - quick_granularity_order_count)))
+
+                        elif new_order['Side'].lower() == 'sell':
+                            if order['Price'] <= qg_end_price:
+                                quick_granularity_order_count += 1
+                            else:
+                                percent_into_slow_granularity = (order['Price'] - qg_end_price) / slow_granularity_spread
+                                print('percent_into_slow_granularity', percent_into_slow_granularity)
+                                new_order['Price'] += (percent_into_slow_granularity * slow_granularity_spread)
+##                                if not(slow_granularity):
+##                                    slow_granularity = array_of_orders[order_count]['Price'] - order['Price']
+##                                modification_multiplier = max(spread_modifier_beyond_qg - 1, 0)
+##                                new_order['Price'] += (modification_multiplier * (slow_granularity * (order_count - quick_granularity_order_count)))
+                        print(new_order['Price'])
+                        new_array_of_orders.append(new_order)
+                        new_weighted_order_list.append(new_order['Amount'] * new_order['Price'])
                 array_of_orders = new_array_of_orders
                 weighted_order_list = new_weighted_order_list
         # This reorganizes the array order so that smaller orders are always closer to the begining of the array than the end
@@ -1359,11 +1407,11 @@ class OperateExchange:
                         new_order = self.executeOrder(order_settings)
                         amount_rebuilt += order_settings['Amount']
                     except Exception as error:
-                        self.CTE.inCaseOfError(**{'Error': error, \
-                                                  'Description': 'rebuilding an array order', \
-                                                  'Program': 'OE', \
-                                                  'Line #': traceback.format_exc().split('line ')[1].split(',')[0], \
-                                                  '# of Attempts': number_of_attempts})
+                        self.CTE.inCaseOfError(**{'error': error, \
+                                                  'description': 'rebuilding an array order', \
+                                                  'program': 'OE', \
+                                                  'line_number': traceback.format_exc().split('line ')[1].split(',')[0], \
+                                                  'number_of_attempts': number_of_attempts})
                         new_order = False
                         if number_of_attempts > 0:
                             new_order = 'SKIP'
