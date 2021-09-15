@@ -387,10 +387,12 @@ class OperateExchange:
                 try:
                     qg_start_percent = self.arrayOrderSettings['Quick Granularity Start %']
                     qg_end_percent = self.arrayOrderSettings['Quick Granularity End %']
-                    slow_granularity_multiplier = self.arrayOrderSettings['Slow Granularity Multiplier']
                 except:
                     qg_start_percent = 'default'
                     qg_end_percent = 'default'
+                try:
+                    slow_granularity_multiplier = self.arrayOrderSettings['Slow Granularity Multiplier']
+                except:
                     slow_granularity_multiplier = 0
             except:
                 quick_granularity_intensity = 0
@@ -749,6 +751,8 @@ class OperateExchange:
                 print('OE : *******************************')
             # If Quick Granularity is being used, this reduces the number of orders further from the starting price
             if quick_granularity_intensity:
+                print('qg_start_percent', qg_start_percent)
+                print('qg_end_percent', qg_end_percent)
                 number_of_orders = len(array_of_orders)
                 order_count = 0
                 stored_amount = 0
