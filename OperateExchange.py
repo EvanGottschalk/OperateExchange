@@ -393,31 +393,31 @@ class OperateExchange:
                     qg_end_percent = 'default'
                     slow_granularity_multiplier = 0
             except:
-                quick_granularity_intensity = None
+                quick_granularity_intensity = 0
             try:
                 maximum_amount = self.arrayOrderSettings['Maximum Amount']
             except:
-                maximum_amount = False
-                self.arrayOrderSettings['Maximum Amount'] = False
+                maximum_amount = 0
+                self.arrayOrderSettings['Maximum Amount'] = 0
             try:
                 readjust_to_execute_maximum_amount = self.arrayOrderSettings['Readjust to Execute Maximum Amount']
             except:
-                readjust_to_execute_maximum_amount = False
+                readjust_to_execute_maximum_amount = 0
             try:
                 slope = self.arrayOrderSettings['Slope']
             except:
-                slope = False
+                slope = 0
             try:
                 end_spread_start_percent = self.arrayOrderSettings['End Spread Start %']
                 end_spread_multiplier = self.arrayOrderSettings['End Spread Multiplier']
             except:
-                end_spread_start_percent = None
-                end_spread_multiplier = None
+                end_spread_start_percent = 0
+                end_spread_multiplier = 0
         else:
             style = ''
-            quick_granularity_intensity = False
-            maximum_amount = False
-            readjust_to_execute_maximum_amount = False
+            quick_granularity_intensity = 0
+            maximum_amount = 0
+            readjust_to_execute_maximum_amount = 0
         #arg 0 : create order?
             try:
                 args[0].append('cancel_execution_attempt')
@@ -435,21 +435,21 @@ class OperateExchange:
                 try:
                     granularity_input = float(args[1])
                 except:
-                    granularity_input = False
+                    granularity_input = 0
             try:
                 spread_input = args[1]['Spread']
             except:
                 try:
                     spread_input = args[2]
                 except:
-                    spread_input = False
+                    spread_input = 0
             try:
                 steepness_input = float(args[1]['Steepness'])
             except:
                 try:
                     steepness_input = float(args[3])
                 except:
-                    steepness_input = False
+                    steepness_input = 0
             try:
                 minimum_order_size_input = int(args[1]['Minimum Order Size'])
             except:
@@ -471,7 +471,7 @@ class OperateExchange:
                 try:
                     slope_input = args[6]
                 except:
-                    slope_input = False
+                    slope_input = 0
         #arg 1 : granularity
             while type(granularity_input) != float:
                 granularity_input = input('\nWhat granularity would you like to use? The default is ' + str(self.arrayOrderSettings['Granularity']) + '\n\nGranularity : ')
@@ -528,6 +528,7 @@ class OperateExchange:
         self.arrayOrderSettings['Minimum Order Size'] = minimum_order_size
         self.arrayOrderSettings['Style'] = style
         self.arrayOrderSettings['Multiplicative Factor'] = multiplicative_factor
+        self.arrayOrderSettings['Slow Granularity Multiplier'] = slow_granularity_multiplier
         effective_amount = self.orderSettings['Amount']
         price = self.orderSettings['Price']
         side = self.orderSettings['Side']
@@ -841,7 +842,6 @@ class OperateExchange:
                 weighted_order_list = new_weighted_order_list
                 number_of_orders = len(array_of_orders)
                 # Slow Granularity Multiplier is applied to increase the spread between orders that come after the Quick Granularity End %
-                slow_granularity_multiplier = 2
                 if slow_granularity_multiplier:
                     price_multiplier = slow_granularity_multiplier - 1
                     new_array_of_orders = []
@@ -849,18 +849,14 @@ class OperateExchange:
                     order_count = 0
                     quick_granularity_order_count = 0
                     slow_granularity_spread = spread * (1 - qg_end_percent)
-##                    print('slow_granularity_spread', slow_granularity_spread)
-##                    print('qg_end_price', qg_end_price)
                     for order in array_of_orders:
                         order_count += 1
                         new_order = order
-##                        print(order['Price'], order['Amount'])
                         if new_order['Side'].lower() == 'buy':
                             if order['Price'] >= qg_end_price:
                                 quick_granularity_order_count += 1
                             else:
                                 percent_into_slow_granularity = (qg_end_price - order['Price']) / slow_granularity_spread
-##                                print('percent_into_slow_granularity', percent_into_slow_granularity)
                                 price_modification = price_multiplier * (percent_into_slow_granularity * slow_granularity_spread)
                                 new_order['Price'] -= price_modification
                         elif new_order['Side'].lower() == 'sell':
@@ -868,10 +864,8 @@ class OperateExchange:
                                 quick_granularity_order_count += 1
                             else:
                                 percent_into_slow_granularity = (order['Price'] - qg_end_price) / slow_granularity_spread
-##                                print('percent_into_slow_granularity', percent_into_slow_granularity)
                                 price_modification = price_multiplier * (percent_into_slow_granularity * slow_granularity_spread)
                                 new_order['Price'] += price_modification
-##                        print(new_order['Price'])
                         new_array_of_orders.append(new_order)
                         new_weighted_order_list.append(new_order['Amount'] * new_order['Price'])
                 array_of_orders = new_array_of_orders
@@ -888,33 +882,38 @@ class OperateExchange:
 ##                    print('qg_end_price', qg_end_price)
                 if side.lower() == 'buy':
                     end_spread_start_price = price - (end_spread_start_percent * spread)
+                    end_spread_end_price = price - spread
+                    end_spread = end_spread_start_price - end_spread_end_price
                     for order in array_of_orders:
                         order_count += 1
                         new_order = order
 ##                    print(order['Price'], order['Amount'])
                         if order['Price'] >= end_spread_start_price:
-                            quick_granularity_order_count += 1
+                            order_count += 1
                         else:
-                            percent_into_slow_granularity = (qg_end_price - order['Price']) / slow_granularity_spread
-##                                print('percent_into_slow_granularity', percent_into_slow_granularity)
-                            price_modification = price_multiplier * (percent_into_slow_granularity * slow_granularity_spread)
+                            percent_into_end_spread = (end_spread_start_price - order['Price']) / end_spread
+##                                print('percent_into_end_spread', percent_into_end_spread)
+                            price_modification = price_multiplier * (percent_into_end_spread * end_spread)
                             new_order['Price'] -= price_modification
+                        new_array_of_orders.append(new_order)
+                        new_weighted_order_list.append(new_order['Amount'] * new_order['Price'])
                 elif side.lower() == 'sell':
                     end_spread_start_price = price + (end_spread_start_percent * spread)
+                    end_spread_end_price = price + spread
+                    end_spread = end_spread_end_price - end_spread_start_price
                     for order in array_of_orders:
                         order_count += 1
                         new_order = order
 ##                        print(order['Price'], order['Amount'])
                         if order['Price'] <= end_spread_start_price:
-                            quick_granularity_order_count += 1
+                            order_count += 1
                         else:
-                            percent_into_slow_granularity = (order['Price'] - qg_end_price) / slow_granularity_spread
-##                                print('percent_into_slow_granularity', percent_into_slow_granularity)
-                            price_modification = price_multiplier * (percent_into_slow_granularity * slow_granularity_spread)
+                            percent_into_end_spread = (order['Price'] - end_spread_start_price) / end_spread
+##                                print('percent_into_end_spread', percent_into_end_spread)
+                            price_modification = price_multiplier * (percent_into_end_spread * end_spread)
                             new_order['Price'] += price_modification
-##                        print(new_order['Price'])
-                    new_array_of_orders.append(new_order)
-                    new_weighted_order_list.append(new_order['Amount'] * new_order['Price'])
+                        new_array_of_orders.append(new_order)
+                        new_weighted_order_list.append(new_order['Amount'] * new_order['Price'])
                 array_of_orders = new_array_of_orders
                 weighted_order_list = new_weighted_order_list
         # This reorganizes the Array Order so that smaller orders are always closer to the begining of the array than the end
