@@ -96,7 +96,7 @@ Before using `OperateExchange`, you must first obtain an API key and secret from
 
 ### Installation
 
-1. Install [`CCXT`](https://github.com/ccxt/ccxt), and optionally `Pandas` and `Matplotlib` if you want to see data visualizations. The easiest way to do this to download `requirements.txt` and use `pip`:
+1. Install [`CCXT`](https://github.com/ccxt/ccxt), and optionally `Pandas` and `Matplotlib` if you want to see data visualizations. The easiest way to do this to download [`requirements.txt`](https://github.com/EvanGottschalk/ConnectToExchange/blob/main/requirements.txt) and use `pip`:
     ```
     pip install -r requirements.txt
     ```
