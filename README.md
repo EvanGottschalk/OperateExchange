@@ -68,21 +68,27 @@ The purpose of `OperateExchange` is in its name - most actions a user would take
 
 ### Built With
 
-`Python`
+* `Python 3.6`
 
-[`CCXT`](https://github.com/ccxt/ccxt) - The fantastic `CCXT` library is critical to `ConnectToExchange`. Huge thanks to [@kroitor](https://github.com/kroitor) and the many other `CCXT` contributors that made this program possible.
+* `Pandas` (*optional; only necessary for charting*)
 
-[`ConnectToExchange`](https://github.com/EvanGottschalk/connecttoexchange) - This is another program I wrote for creating the initial connection to a cryptocurrency exchange. You can read more about it here: [github.com/EvanGottschalk/ConnectToExchange](https://github.com/EvanGottschalk/connecttoexchange)
+* `Matplotlib` (*optional; only necessary for charting*)
 
-[`GetCurrentTime`](https://github.com/EvanGottschalk/GetCurrentTime) - This program is imported to help collect time data in a legible fashion. It also allows for the translation of time stamps. You can read more about it here: [github.com/EvanGottschalk/GetCurrentTime](https://github.com/EvanGottschalk/GetCurrentTime)
+* [`CCXT`](https://github.com/ccxt/ccxt) - The fantastic `CCXT` library is critical to `ConnectToExchange`. Huge thanks to [@kroitor](https://github.com/kroitor) and the many other `CCXT` contributors that made this program possible.
 
-[`AudioPlayer`](https://github.com/EvanGottschalk/AudioPlayer) - This is a simple program for playing custom audio alerts. It can be used with `ConnectToExchange` to warn you if an error occurs. You can read more about it here: [github.com/EvanGottschalk/AudioPlayer](https://github.com/EvanGottschalk/AudioPlayer)
+* [`ConnectToExchange`](https://github.com/EvanGottschalk/connecttoexchange) - This is another program I wrote for creating the initial connection to a cryptocurrency exchange. You can read more about it here: [github.com/EvanGottschalk/ConnectToExchange](https://github.com/EvanGottschalk/connecttoexchange)
 
-`QuadraticFormula` - This is a simple program for calculating the solutions to a quadratic equation using the quadratic formula.
+* [`GetCurrentTime`](https://github.com/EvanGottschalk/GetCurrentTime) - This program is imported to help collect time data in a legible fashion. It also allows for the translation of time stamps. You can read more about it here: [github.com/EvanGottschalk/GetCurrentTime](https://github.com/EvanGottschalk/GetCurrentTime)
+
+* [`AudioPlayer`](https://github.com/EvanGottschalk/AudioPlayer) - This is a simple program for playing custom audio alerts. It can be used with `ConnectToExchange` to warn you if an error occurs. You can read more about it here: [github.com/EvanGottschalk/AudioPlayer](https://github.com/EvanGottschalk/AudioPlayer)
+
+* `QuadraticFormula` - This is a simple program for calculating the solutions to a quadratic equation using the quadratic formula.
 
 
 <!-- GETTING STARTED -->
 ## Getting Started
+
+`OperateExchange` is easy to get up and running. Let [me](https://github.com/EvanGottschalk) know if you have any trouble! I'm always trying to make installation as smooth as possible.
 
 ### Prerequisites
 
@@ -90,10 +96,11 @@ Before using `OperateExchange`, you must first obtain an API key and secret from
 
 ### Installation
 
-1. Install [`CCXT`](https://github.com/ccxt/ccxt). This can be done in a number of ways. I used `pip`.
-   ```sh
-   pip install ccxt
-   ```
+1. Install [`CCXT`](https://github.com/ccxt/ccxt), and optionally `Pandas` and `Matplotlib` if you want to see data visualizations. The easiest way to do this to download `requirements.txt` and use `pip`:
+    ```
+    pip install -r requirements.txt
+    ```
+  
 2. Download the `.py` files from this repository (`OperateExchange.py`, `ConnectToExchange.py`, `GetCurrentTime.py`, `QuadraticFormula.py`, and optionally `AudioPlayer.py`)
 
 3. In the same folder as `ConnectToExchange.py`, create a `.txt` file to store your API information. Its name should start with the exchange you are using, followed by an underscore, followed by the name of the account you're using, and ending with `_API.txt`.
