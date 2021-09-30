@@ -1,18 +1,3 @@
-<!--
-*** Do a search and replace for the following:
-*** EvanGottschalk, OperateExchange, Fort1Evan, magnus5557@gmail.com, OperateExchange, A program for creating simple orders & complex order arrays on cryptocurrency exchanges
--->
-
-
-
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
@@ -26,7 +11,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/EvanGottschalk/OperateExchange">
-    <img src="logo.png" alt="Logo" width="151" height="80">
+    <img src="logo.png" alt="Logo" width="250" height="130">
   </a>
 
   <h3 align="center">OperateExchange</h3>
@@ -80,14 +65,12 @@
 
 The purpose of `OperateExchange` is in its name - most actions a user would take on a cryptocurrency exchange, such as creating or cancelling orders, can be done using this program instead. The advantage of using `OperateExchange` is that users can create groups of dozens of orders, or cancel groups of orders. This allows for more efficient trading than using an exchange's normal interface, which usually only allows users to open or close one order per click.
 
-** *Some exchanges have an API rate limit, which means you can only put in so many orders per time. Read the API limit rules for the particular exchange if you want to use `OperateExchange` to create multiple orders on it.*
-
 
 ### Built With
 
 `Python`
 
-[`CCXT`](https://github.com/ccxt/ccxt) - The fantastic `CCXT` library is critical to this program. Huge thanks to [@kroitor](https://github.com/kroitor) and the many other `CCXT` contributors that made this program possible.
+[`CCXT`](https://github.com/ccxt/ccxt) - The fantastic `CCXT` library is critical to `ConnectToExchange`. Huge thanks to [@kroitor](https://github.com/kroitor) and the many other `CCXT` contributors that made this program possible.
 
 [`ConnectToExchange`](https://github.com/EvanGottschalk/connecttoexchange) - This is another program I wrote for creating the initial connection to a cryptocurrency exchange. You can read more about it here: [github.com/EvanGottschalk/ConnectToExchange](https://github.com/EvanGottschalk/connecttoexchange)
 
@@ -214,9 +197,6 @@ Project Link: [https://github.com/EvanGottschalk/OperateExchange](https://github
 
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
-
-* Huge thanks to [@kroitor](https://github.com/kroitor) and the many other [CCXT](https://github.com/ccxt/ccxt) contributors that made this program possible.
-* Thanks to [@bartmassi](https://github.com/bartmassi) for working with me to improve the program's security, and for answering numerous other questions, and also for always being a helpful, available, and informative teacher (and friend).
 
 Thinking about contributing to this project? Please do! Your Github username will then appear here.
 
