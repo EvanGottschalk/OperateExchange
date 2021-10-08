@@ -1,4 +1,4 @@
-# PURPOSE - This program is for connecting to cryptocurrency exchanges using the CCXT library, and for retrieving information from them
+# This program is for connecting to and retrieving information from cryptocurrency exchanges using the CCXT library
 
 import os
 import sys
@@ -17,22 +17,10 @@ from AudioPlayer import AudioPlayer
 from GetCurrentTime import GetCurrentTime
 
 # CustomEncryptor.py is used to access encrypted API keys
-try:
-    from CustomEncryptor import CustomEncryptor
-except:
-    try:
-        from CustomEncryptor.CustomEncryptor import CustomEncryptor
-    except:
-        print('CTE : ERROR! CustomEncryptor.py not found!')
-        print('CTE : If your API keys have trade priveledges, be sure to save them with encryption. I recommend using ' + \
-              'CustomEncryptor.py, which can be downloaded here: github.com/EvanGottschalk/CustomEncryptor')
+from CustomEncryptor import CustomEncryptor
 
-# ccxt is the fantastic library that makes the interaction with cryptocurrency exchanges possible
+# CCXT is the fantastic library that makes the interaction with cryptocurrency exchanges possible
 import ccxt
-
-# I ultimately stopped using this root assignment, but I may add it back
-##root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-##sys.path.append(root + '/python')
 
 # This function will create the ConnectToExchange class in a non-local scope, making it more secure
 def main():
@@ -42,33 +30,27 @@ def main():
 
 class ConnectToExchange:
     def __init__(self):
-    # Toggle silent_mode to True to prevent all print statements that aren't error messages. 
+        # Toggle silent_mode to True to prevent all print statements that aren't error messages
         self.silent_mode = False
         self.GCT = GetCurrentTime()
         self.AP = AudioPlayer()
-        try:
-            self.CE = CustomEncryptor()
-        except:
-            try:
-                self.CE = CustomEncryptor.CustomEncryptor()
-            except:
-                self.CE = False
-    # The improved_columns are simply the normal columns of an OHLCV, but with capitalization and a 'Time' column added. This variable helps with CSV exports
+        self.CE = CustomEncryptor.CustomEncryptor()
+        # The improved_columns are simply the normal columns of an OHLCV, but with capitalization and a 'Time' column added. This variable helps with CSV exports
         self.improved_columns = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume', 'Time']
+        # The timeframes_All dict contains the most common time durations that cryptocurrency exchanges use in graphs of price over time
         self.timeframes_All = {'1m': '1m', '3m': '3m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '2h': '2h', '4h': '4h', '6h': '6h', '8h': '8h', '12h': '12h', '1d': '1d', '3d': '3d', '1w': '1w', '1M': '1M'}
-    # The activity logs are a history of every connection or other exchange-related action that's been made
-    # The Master Activity Log has every action from all time
-    # The Daily Activity Logs are broken up into individual days
+        # The activity logs are a history of every connection or other exchange-related action that has been made
+        # The Master Activity Log has every action from all time
+        # The Daily Activity Logs are broken up into individual days
         self.activityLog_Current = {}
         self.activity_log_location = 'Activity Logs/'
-        try:
+        if not(os.path.isdir('ConnectToExchange/Activity Logs')):
             os.makedirs('ConnectToExchange/Activity Logs')
-        except Exception:
-            pass
-        self.errorLog = []
-    # This dict stores the API information for each account & exchange
-    # Fill this in with the exchanges & account names you use
-    # Enter your favorite exchange + account pair as 'Default' if you want the connect() function to connect with no inputs
+        # Information about any errors that occur are stored in error_log and exported to CSV
+        self.error_log = []
+        # This dict stores the API information for each account & exchange
+        # Fill this in with the exchanges & account names you use
+        # Enter your favorite exchange + account pair as 'Default' if you want the connect() function to connect with no inputs
         self.exchangeAccounts = {'Coinbase': {'apiKey Length': 32, \
                                               'secret Length': 88, \
                                               'Main': {'apiKey': '', 'secret': ''}, \
@@ -87,26 +69,27 @@ class ConnectToExchange:
                                             'Monty': {'apiKey': '', 'secret': ''}}, \
                                  'Default': 'Kraken Main', \
                                  'Default Exchange': 'Kraken', \
-                                 'Default Account': 'Main'}
+                                 'Default Account': 'Main', \
+                                 'Default Type': 'spot'}
         self.currentConnectionDetails = {'Exchange Name': '',
                                          'Account Name': '', \
                                          'Time of Acccess': str(datetime.now())}
-    # availableSymbols contains lists of the cryptocurrencies tradeable on a given exchange
-    # Whenever connect() is used, availableSymbols will be updated to have the exchange name as a new key and a list of the available symbols as the value
+        # availableSymbols contains lists of the cryptocurrencies tradeable on a given exchange
+        # Whenever connect() is used, availableSymbols will be updated to have the exchange name as a new key and a list of the available symbols as the value
         self.availableSymbols = {}
-    # EMA_smoother is an int that is used in calculating exponential moving averages. The most common value to use is 2. Feel free to change it
+        # EMA_smoother is an int that is used in calculating exponential moving averages. The most common value to use is 2. Feel free to change it
         self.EMA_smoother = 2
-        self.balances = False
-        self.exchange = False
+        self.balances = None
+        self.exchange = None
 
     def main_loop(self):
         print('CTE : main_loop initiated')
         exchange = self.connect()
-##    # I run getOHLCVs() on the 1 minute timeframe in the main loop to build up OHLCV data on my own machine via updateMasterOHLCVs()
-##    # This is useful because it is usually difficult to get minute-to-minute data through APIs unless the data is very recent
+        # I run getOHLCVs() on the 1 minute timeframe in the main loop to build up OHLCV data on my own machine via updateMasterOHLCVs()
+        # This is optional, but useful because it is usually difficult to get minute-to-minute data through APIs unless the data is very recent
         self.getOHLCVs('default', 'BTC', '1m', 1999, {}, 'no')
 
-# This function is for connecting to exchanges using API keys
+    # This is the primary function of the class. It creates the connections to cryptocurrency exchanges using API keys
     def connect(self, *args):
         connected = False
         while not(connected):
@@ -243,6 +226,101 @@ class ConnectToExchange:
         master_log_dataframe.to_csv(self.activity_log_location + exchange_name + '_ActivityLog_Master.csv')
         return(self.exchange)
 
+    # This is the primary function of the class. It creates the connections to cryptocurrency exchanges using API keys
+    def connect_NEW(self, exchange_name=None, account_name=None):
+        if not(exchange_name) or str(exchange_name).lower() == 'default':
+            exchange_name = self.exchangeAccounts['Default Exchange']
+        if not(account_name) or str(account_name).lower() == 'default':
+            account_name = self.exchangeAccounts['Default Account']
+        connected = False
+        # The API information matching exchange_name and account_name is retrieved and read
+        if self.exchangeAccounts[exchange_name][account_name]['apiKey'] == '':
+            self.fetch_API_key(exchange_name, account_name)
+        if len(self.exchangeAccounts[exchange_name][account_name]['apiKey']) > 100:
+            try:
+                key = self.CE.decrypt(self.exchangeAccounts[exchange_name][account_name]['apiKey'])[0:36]
+                secret = self.CE.decrypt(self.exchangeAccounts[exchange_name][account_name]['secret'])[0:91]
+            except Exception as error:
+                self.inCaseOfError(**{'error': error, \
+                                      'description': 'reading API key file', \
+                                      'program': 'CTE', \
+                                      'line_number': traceback.format_exc().split('line ')[1].split(',')[0]})
+        else:
+            key = self.exchangeAccounts[exchange_name][account_name]['apiKey']
+            secret = self.exchangeAccounts[exchange_name][account_name]['secret']
+        try:
+            # The API connection to the exchange is made
+            self.exchange = ccxt.kraken({'apiKey': key, \
+                                         'secret': secret, \
+                                         'timeout': 30000, \
+                                         'enableRateLimit': True, \
+                                         'options': {'adjustForTimeDifference': True, \
+                                                     'defaultType': self.exchangeAccounts['Default Type'], \
+                                                     'postOnly': True}})
+            connected = True
+        except Exception as error:
+            self.inCaseOfError(**{'error': error, \
+                                  'description': 'connecting to the exchange', \
+                                  'program': 'CTE', \
+                                  'line_number': traceback.format_exc().split('line ')[1].split(',')[0]})
+            connected = False
+        del key, secret
+        if not(connected):
+            print('CTE : ERROR! Failed to connect to exchange.')
+            return(None)
+        else:
+            # Variables are assigned and the ActivityLog is updated
+            self.currentConnectionDetails['Exchange Name'] = exchange_name
+            self.currentConnectionDetails['Account Name'] = account_name
+            self.exchange_name = exchange_name
+            self.account_name = account_name
+            date = self.GCT.getDateString()
+            timestamp = self.GCT.getTimeStamp()
+            time = self.GCT.getTimeString()
+            self.availableSymbols[exchange_name] = list(self.exchange.loadMarkets())
+            # Balances are automatically updated if they have been previously fetched
+            if self.balances:
+                self.balances = self.getBalances()
+            # New entries are added to the Master Activity Log and Daily Activity Logs
+            try:
+                self.activityLog_Master = pickle.load(open(self.activity_log_location + exchange_name + '_ActivityLog_Master.pickle', 'rb'))
+                if not(self.silent_mode):
+                    print('\nCTE : ' + exchange_name + ' ' + account_name + ' Master Activity Log loaded!')
+                largestTimestamp = max(self.activityLog_Master)
+                if not(self.silent_mode):
+                    print('CTE : The most recent activity was on ' + self.activityLog_Master[largestTimestamp]['Date'] + '!')
+            except FileNotFoundError:
+                self.activityLog_Master = {}
+                if not(self.silent_mode):
+                    print('CTE : No past Activity Log found!')
+            try:
+                self.activityLog_Daily = pickle.load(open(self.activity_log_location + exchange_name + '_ActivityLog_Daily_' + date + '.pickle', 'rb'))
+                if not(self.silent_mode):
+                    print('CTE : Daily Activity Log loaded!')
+            except FileNotFoundError:
+                self.activityLog_Daily = {'Date': date, \
+                                          'Activity Log': {}}
+                if not(self.silent_mode):
+                    print('CTE : No Daily Activity Log found for today!')
+            # A new activity log entry is created and saved
+            self.currentConnectionDetails['Time of Access'] = str(datetime.now())
+            self.activityLog_Current[timestamp] = {'Activity': 'Connected', \
+                                                   'Date': date, \
+                                                   'Time': time}
+            self.activityLog_Master.update(self.activityLog_Current)
+            self.activityLog_Daily['Activity Log'][time] = {'Activity': 'Connected', \
+                                                            'Time': time, \
+                                                            'Timestamp': timestamp}
+            pickle.dump(self.activityLog_Master, open(self.activity_log_location + exchange_name + '_ActivityLog_Master.pickle', 'wb'))
+            pickle.dump(self.activityLog_Daily, open(self.activity_log_location + exchange_name + '_ActivityLog_Daily_' + date + '.pickle', 'wb'))
+            daily_log_dataframe = pd.DataFrame(self.activityLog_Daily['Activity Log'])
+            daily_log_dataframe = daily_log_dataframe.T
+            daily_log_dataframe.to_csv(self.activity_log_location + exchange_name + '_ActivityLog_Daily_' + date + '.csv')
+            master_log_dataframe = pd.DataFrame(self.activityLog_Master)
+            master_log_dataframe = master_log_dataframe.T
+            master_log_dataframe.to_csv(self.activity_log_location + exchange_name + '_ActivityLog_Master.csv')
+            return(self.exchange)
+
 # This function is for retrieving API keys from a .txt file
 # Each file should have the API information for one account, end in '_API.txt', and have the API key on the first line and the API secret on the second line
     def fetch_API_key(self, exchange_name, account_name):
@@ -270,34 +348,25 @@ class ConnectToExchange:
             print('CTE : ERROR! Failed to find API Key file.')
 
 # This function is for retrieving information about open trading positions
-    def getPositions(self, *args):
-    # The only argument getPositions takes is an exchange name, which is optional
-    # If called with no argument, it will try to see if it's already connected to an exchange. If it's not, it connects to the default exchange
-        if len(args) > 0:
-            self.connect(args[0])
-        else:
-            try:
-                self.exchange.fetchTicker('BTC/USDT')
-            except:
-                try:
-                    self.exchange.fetchTicker('BTC/USD')
-                except:
-                    self.connect(self.exchangeAccounts['Default'])
+    def getPositions(self, exchange=None):
+        if exchange:
+            self.connect(exchange)
+        elif not(self.exchange):            
+            self.connect(self.exchangeAccounts['Default'])
         positions = False
         number_of_attempts = 0
         while not(positions):
             number_of_attempts += 1
             try:
-            # This is the line that uses CCXT to actually get the information about the position
                 positions = self.exchange.fetch_positions(None, {'currency':'BTC'})
             except Exception as error:
                 positions = False
-                self.inCaseOfError(**{'Error': error, \
-                                      'Description': 'fetching positions', \
-                                      'Program': 'CTE', \
-                                      'Line #': traceback.format_exc().split('line ')[1].split(',')[0], \
-                                      '# of Attempts': number_of_attempts})
-    # positions_dict is a cleaned up version of the raw position information retrieved by exchange.fetch_positions()
+                self.inCaseOfError(**{'error': error, \
+                                      'description': 'fetching positions', \
+                                      'program': 'CTE', \
+                                      'line_number': traceback.format_exc().split('line ')[1].split(',')[0], \
+                                      'number_of_attempts': number_of_attempts})
+        # positions_dict is a tidier version of the raw position information retrieved by exchange.fetch_positions()
         positions_dict = {}
         positions_dict['Entry Price'] = float(positions[0]['avgEntryPrice'])
         positions_dict['Side'] = positions[0]['side']
@@ -434,11 +503,10 @@ class ConnectToExchange:
                         spot_balances[key] = raw_spot_balances[key]                    
             self.balances['Spot'] = spot_balances
         except Exception as error:
-            self.inCaseOfError(**{'Error': error, \
-                                  'Description': 'fetching Spot balances', \
-                                  'Pause Time': 0, \
-                                  'Program': 'CTE', \
-                                  'Line #': traceback.format_exc().split('line ')[1].split(',')[0]})
+            self.inCaseOfError(**{'error': error, \
+                                  'description': 'fetching Spot balances', \
+                                  'program': 'CTE', \
+                                  'line_number': traceback.format_exc().split('line ')[1].split(',')[0]})
     # Contract Trade Account balances are fetched and organized
         contract_balances = {}
         for available_symbol in self.availableSymbols[exchange_name]:
@@ -453,11 +521,10 @@ class ConnectToExchange:
                         contract_balances[available_symbol]['total'] = float(raw_contract_balance[available_symbol]['total'])
                         contract_balances[available_symbol]['dict'] = raw_contract_balance
                 except Exception as error:
-                    self.inCaseOfError(**{'Error': error, \
-                                          'Description': 'fetching ' + available_symbol + ' Contract balance', \
-                                          'Pause Time': 0, \
-                                          'Program': 'CTE', \
-                                          'Line #': traceback.format_exc().split('line ')[1].split(',')[0]})
+                    self.inCaseOfError(**{'error': error, \
+                                          'description': 'fetching ' + available_symbol + ' Contract balance', \
+                                          'program': 'CTE', \
+                                          'line_number': traceback.format_exc().split('line ')[1].split(',')[0]})
         self.balances['Contract'] = contract_balances
         return(self.balances)
 
@@ -1133,11 +1200,11 @@ class ConnectToExchange:
             try:
                 current_price = self.exchange.fetchTicker(symbol)['bid']
             except Exception as error:
-                self.inCaseOfError(**{'Error': error, \
-                                      'Description': 'checking the current BTC price', \
-                                      'Program': 'CTE', \
-                                      'Line #': traceback.format_exc().split('line ')[1].split(',')[0], \
-                                      '# of Attempts': number_of_attempts})
+                self.inCaseOfError(**{'error': error, \
+                                      'description': 'checking the current BTC price', \
+                                      'program': 'CTE', \
+                                      'line_number': traceback.format_exc().split('line ')[1].split(',')[0], \
+                                      'number_of_attempts': number_of_attempts})
                 current_price = False
                 if number_of_attempts % 5 == 0:
                     self.connect(self.exchangeAccounts['Default'])
@@ -1210,7 +1277,7 @@ class ConnectToExchange:
                       'Program': program, \
                       'Line #': line_number, \
                       '# of Attempts': number_of_attempts}
-        self.errorLog.append(error_dict)
+        self.error_log.append(error_dict)
         self.AP.playSound('Navi Hey')
         if pause_time > 0:
             print('CTE : Pausing for ' + str(pause_time) + ' seconds')
