@@ -11,8 +11,16 @@ from AudioPlayer import AudioPlayer
 
 import copy
 import random
-import pandas as pd
-import matplotlib.pyplot as pyplot
+
+# Pandas and Pyplot are optional libraries for charting
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+try:
+    import matplotlib.pyplot as pyplot
+except ImportError:
+    pyplot = None
 
 # This function will create the OperateExchange class in a non-local scope, making it more secure
 def main():
@@ -118,6 +126,8 @@ class OperateExchange:
             if not(symbol_input in self.CTE.availableSymbols[self.CTE.exchange_name]):
                 if symbol_input == 'DOGE/USD':
                     self.CTE.availableSymbols[self.CTE.exchange_name].append('DOGE/USD')
+                elif symbol_input == 'BTCUSD':
+                    self.CTE.availableSymbols[self.CTE.exchange_name].append('BTCUSD')
                 else:
                     symbol_input = False
         except:
@@ -846,6 +856,7 @@ class OperateExchange:
                 weighted_order_list = new_weighted_order_list
                 number_of_orders = len(array_of_orders)
                 # Slow Granularity Multiplier is applied to increase the spread between orders that come after the Quick Granularity End %
+                slow_granularity_multiplier = 4
                 if slow_granularity_multiplier:
                     price_multiplier = slow_granularity_multiplier - 1
                     new_array_of_orders = []
@@ -1044,10 +1055,11 @@ class OperateExchange:
                 print('        Ending Order Reduced By: ' + str(int(extra_amount)))
             print('_________________________________________')
         # Saves current orders to CSV and makes a bar chart
-            dataframe_of_orders = pd.DataFrame(array_of_orders, columns = ['Exchange', 'Symbol', 'Side', 'Amount', 'Order Type', 'Price'])
-            dataframe_of_orders.to_csv('Array of Orders.csv')
-            if not(args[0] == 'update_current_parameters') and not(args[0] == 'update_via_end_price'):
-                self.graphArrayOrders(array_of_orders)
+            if pd:
+                dataframe_of_orders = pd.DataFrame(array_of_orders, columns = ['Exchange', 'Symbol', 'Side', 'Amount', 'Order Type', 'Price'])
+                dataframe_of_orders.to_csv('Array of Orders.csv')
+                if not(args[0] == 'update_current_parameters') and not(args[0] == 'update_via_end_price'):
+                    self.graphArrayOrders(array_of_orders)
         # Executes orders
             if not(args[0] == 'use_current_settings') and not(args[0] == 'update_current_parameters') and not(args[0] == 'update_via_end_price'):
                 self.confirmation = input('\nAre you sure you want to execute these orders?\n(1) : Yes\n(2) : No\n\nInput : ')
@@ -1102,32 +1114,40 @@ class OperateExchange:
         
 
     def graphArrayOrders(self, array_of_orders):
-        dataframe_of_orders = pd.DataFrame(array_of_orders, columns = ['Exchange', 'Symbol', 'Side', 'Amount', 'Order Type', 'Price'])
-        order_index = 0
-        entry_bar = -1
-        list_of_prices = []
-    # These for loops mark the entry position at full execution on the bar chart
-        if self.orderSettings['Side'] == 'buy':
-            side_color = 'green'
-            for order in array_of_orders:
-                list_of_prices.append(order['Price'])
-                if order['Price'] < self.arrayOrderParameters['Entry at Full Execution']:
-                    if entry_bar < 0:
-                        entry_bar = order_index
-                order_index += 1        
-        elif self.orderSettings['Side'] == 'sell':
-            side_color = 'red'
-            for order in array_of_orders:
-                list_of_prices.append(order['Price'])
-                if order['Price'] > self.arrayOrderParameters['Entry at Full Execution']:
-                    if entry_bar < 0:
-                        entry_bar = order_index
-                order_index += 1
-        pyplot.clf()
-        self.array_order_bar_chart = pyplot.bar(list_of_prices, list(dataframe_of_orders['Amount']), color=side_color)
-        self.array_order_bar_chart[entry_bar].set_color('blue')
-        pyplot.ion()
-        pyplot.show()
+        if pyplot:
+            if pd:
+                dataframe_of_orders = pd.DataFrame(array_of_orders, columns = ['Exchange', 'Symbol', 'Side', 'Amount', 'Order Type', 'Price'])
+                order_index = 0
+                entry_bar = -1
+                list_of_prices = []
+                # These for loops mark the entry position at full execution on the bar chart
+                if self.orderSettings['Side'] == 'buy':
+                    side_color = 'green'
+                    for order in array_of_orders:
+                        list_of_prices.append(order['Price'])
+                        if order['Price'] < self.arrayOrderParameters['Entry at Full Execution']:
+                            if entry_bar < 0:
+                                entry_bar = order_index
+                        order_index += 1        
+                elif self.orderSettings['Side'] == 'sell':
+                    side_color = 'red'
+                    for order in array_of_orders:
+                        list_of_prices.append(order['Price'])
+                        if order['Price'] > self.arrayOrderParameters['Entry at Full Execution']:
+                            if entry_bar < 0:
+                                entry_bar = order_index
+                        order_index += 1
+                spread = max(list_of_prices) - min(list_of_prices)
+                bar_width = spread / 100
+                pyplot.clf()
+                self.array_order_bar_chart = pyplot.bar(list_of_prices, list(dataframe_of_orders['Amount']), color=side_color, width=bar_width)
+                self.array_order_bar_chart[entry_bar].set_color('blue')
+                pyplot.ion()
+                pyplot.show()
+            else:
+                print('OE : ERROR! Failed to plot Array Order because Pandas is not imported.')
+        else:
+            print('OE : ERROR! Failed to plot Array Order because Pyplot is not imported.')
 
     def createOrder(self, *args):
         if type(args[0]) == list:
@@ -1314,12 +1334,17 @@ class OperateExchange:
 
     
     def executeOrder(self, order_settings_dict):
-        order = self.CTE.exchange.createOrder(symbol=order_settings_dict['Symbol'], \
-                                          type=order_settings_dict['Order Type'], \
-                                          side=order_settings_dict['Side'], \
-                                          amount=order_settings_dict['Amount'], \
-                                          price=order_settings_dict['Price'], \
-                                          params={'timeInForce':'PostOnly'})
+        # this if should be replaced with a more robust Contract vs. Spot feature
+        if order_settings_dict['Symbol'] == 'BTC/USD':
+            symbol = 'BTCUSD'
+        else:
+            symbol = order_settings_dict['Symbol']
+        order = self.CTE.exchange.createOrder(symbol=symbol, \
+                                              type=order_settings_dict['Order Type'], \
+                                              side=order_settings_dict['Side'], \
+                                              amount=order_settings_dict['Amount'], \
+                                              price=order_settings_dict['Price'], \
+                                              params={'timeInForce':'PostOnly'})
         self.confirmation = False
         return(order)
 
@@ -1844,7 +1869,8 @@ class OperateExchange:
         elif timeframe == '3':
             timeframe = '1D'
         OHLCVs = self.CTE.exchange.fetchOHLCV(symbol, timeframe, limit=10)
-        OHLCVs_dataframe = pd.DataFrame(OHLCVs, columns = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
+        if pd:
+            OHLCVs_dataframe = pd.DataFrame(OHLCVs, columns = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
         return(OHLCVs_dataframe)
 
 # This will create the OperateExchange class in a non-local scope, making it more secure
